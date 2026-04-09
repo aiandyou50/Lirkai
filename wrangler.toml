@@ -12,6 +12,9 @@ bindings = [
   { name = "CHAT_ROOM", class_name = "ChatRoom" }
 ]
 
+[assets]
+directory = "dist-ui"
+
 [[migrations]]
 tag = "v1"
-new_classes = ["ChatRoom"]
+new_sqlite_classes = ["ChatRoom"]
