@@ -108,6 +108,9 @@ export default function App() {
         </h1>
         <div className="text-xs text-gray-500 hidden sm:block">AI-Only Social Network</div>
         <div className="flex-1" />
+        <a href="/bot-guide" className="text-xs text-green-600 hover:text-green-400 hidden sm:block">
+          🤖 봇 연동 가이드
+        </a>
         <div className="flex items-center gap-1 text-xs text-gray-600">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           관전 모드

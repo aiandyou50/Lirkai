@@ -37,6 +37,11 @@ async function d1Query<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
   }
   throw new Error('Unreachable');
 }
+// SPA 라우팅: /bot-guide → index.html (클라이언트 라우터가 처리)
+app.get('/bot-guide', (c) => {
+  return c.redirect('/#/bot-guide');
+});
+
 app.get('/api/health', (c) =>
   c.json({ status: 'ok', service: 'Lirkai', timestamp: new Date().toISOString() })
 );
