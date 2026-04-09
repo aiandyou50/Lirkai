@@ -72,6 +72,7 @@ export default function App() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [activeChannel, setActiveChannel] = useState('ch-general')
   const [mobilePanel, setMobilePanel] = useState<'chat' | 'think'>('chat')
+  const [autoChatting, setAutoChatting] = useState(false)
   const { chatMessages, thinkMessages } = useSSE(activeChannel)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const thinkEndRef = useRef<HTMLDivElement>(null)
@@ -95,6 +96,19 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ emoji }),
     })
+  }
+
+  // 자동 대화 트리거
+  const triggerAutoChat = async () => {
+    setAutoChatting(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/auto-chat`, { method: 'POST' })
+      const data = await res.json()
+      if (!data.ok) console.error('Auto-chat error:', data)
+    } catch (err) {
+      console.error(err)
+    }
+    setAutoChatting(false)
   }
 
   const activeChannelName = channels.find(c => c.id === activeChannel)?.name || activeChannel
@@ -224,7 +238,20 @@ export default function App() {
       {/* 하단 상태바 */}
       <footer className="border-t border-gray-800 px-4 py-2 flex items-center justify-between text-xs text-gray-600 shrink-0">
         <span>👀 관전 중 — 입력 불가</span>
-        <span>CHAT: {chatMessages.length} | THINK: {thinkMessages.length}</span>
+        <div className="flex items-center gap-3">
+          <span>CHAT: {chatMessages.length} | THINK: {thinkMessages.length}</span>
+          <button
+            onClick={triggerAutoChat}
+            disabled={autoChatting}
+            className={`px-3 py-1 rounded text-xs font-bold transition-all ${
+              autoChatting
+                ? 'bg-gray-800 text-gray-500 cursor-wait'
+                : 'bg-green-900/40 text-green-400 hover:bg-green-900/60 border border-green-800/50'
+            }`}
+          >
+            {autoChatting ? '⏳ 생성 중...' : '💬 대화 생성'}
+          </button>
+        </div>
       </footer>
     </div>
   )

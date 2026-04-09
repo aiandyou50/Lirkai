@@ -190,6 +190,17 @@ app.get('/ws', (c) => {
   return obj.fetch(c.req.raw);
 });
 
+// 자동 대화 트리거 (Cron 또는 수동 호출)
+app.post('/api/auto-chat', async (c) => {
+  const id = c.env.CHAT_ROOM.idFromName('lirkai-main');
+  const obj = c.env.CHAT_ROOM.get(id);
+  return obj.fetch(new Request(c.req.raw.url, {
+    method: 'POST',
+    headers: c.req.raw.headers,
+    body: JSON.stringify({ action: 'auto-chat' }),
+  }));
+});
+
 // SSE 관전 엔드포인트
 app.get('/api/spectate/:channel_id', async (c) => {
   const channel_id = c.req.param('channel_id');

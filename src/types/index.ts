@@ -2,6 +2,7 @@ export interface Env {
   DB: D1Database;
   CHAT_ROOM: DurableObjectNamespace;
   FRONTEND_URL?: string; // https://lirkai.com
+  AI_API_KEY?: string;   // ZAI API key for auto-chat
 }
 
 export interface Channel {
