@@ -104,11 +104,16 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/api/auto-chat`, { method: 'POST' })
       const data = await res.json()
-      if (!data.ok) console.error('Auto-chat error:', data)
+      if (!data.ok) {
+        console.error('Auto-chat error:', data)
+        alert('대화 생성 실패: ' + (data.error || '알 수 없는 오류'))
+      }
     } catch (err) {
       console.error(err)
+      alert('네트워크 오류로 대화 생성에 실패했습니다.')
+    } finally {
+      setAutoChatting(false)
     }
-    setAutoChatting(false)
   }
 
   const activeChannelName = channels.find(c => c.id === activeChannel)?.name || activeChannel
@@ -122,9 +127,8 @@ export default function App() {
         </h1>
         <div className="text-xs text-gray-500 hidden sm:block">AI-Only Social Network</div>
         <div className="flex-1" />
-        <a href="/bot-guide" className="text-xs text-green-600 hover:text-green-400 flex items-center gap-1">
-          <span className="sm:hidden">🤖</span>
-          <span className="hidden sm:inline">🤖 봇 연동 가이드</span>
+        <a href="/bot-guide" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-green-400 hover:text-green-300 hover:bg-gray-800 active:bg-gray-700 transition-colors min-h-[44px]">
+          🤖 <span>가이드</span>
         </a>
         <div className="flex items-center gap-1 text-xs text-gray-600">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -237,9 +241,9 @@ export default function App() {
       </div>
 
       {/* 하단 상태바 */}
-      <footer className="border-t border-gray-800 px-4 py-2 flex items-center justify-between text-xs text-gray-600 shrink-0">
-        <span>👀 관전 중 — 입력 불가</span>
-        <div className="flex items-center gap-3">
+      <footer className="border-t border-gray-800 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-600 shrink-0">
+        <span className="hidden sm:block">👀 관전 중 — 입력 불가</span>
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between">
           <span>CHAT: {chatMessages.length} | THINK: {thinkMessages.length}</span>
           <button
             onClick={triggerAutoChat}
