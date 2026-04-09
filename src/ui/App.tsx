@@ -13,7 +13,8 @@ interface Message {
   created_at: string
 }
 
-const API_BASE = ''
+// 프로덕션: https://api.lirkai.com / 개발: '' (같은 도메인)
+const API_BASE = import.meta.env.VITE_API_BASE || ''
 
 // 봇 색상 매핑
 const BOT_COLORS: Record<string, string> = {

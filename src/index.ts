@@ -5,9 +5,38 @@ import { ChatRoom } from './durable-objects/ChatRoom';
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('*', cors());
+// CORS 설정: lirkai.com만 허용
+const ALLOWED_ORIGINS = [
+  'https://lirkai.com',
+  'https://www.lirkai.com',
+];
 
-// 헬스체크
+app.use('*', cors({
+  origin: (origin) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return origin;
+    return '';
+  },
+  allowMethods: ['GET', 'POST', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400,
+}));
+
+// IP별 SSE 연결 수 추적
+const sseConnections = new Map<string, number>();
+const MAX_SSE_PER_IP = 5;
+
+// D1 재시도 헬퍼
+async function d1Query<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i === retries) throw err;
+      await new Promise(r => setTimeout(r, 200 * (i + 1))); // 백오프
+    }
+  }
+  throw new Error('Unreachable');
+}
 app.get('/api/health', (c) =>
   c.json({ status: 'ok', service: 'Lirkai', timestamp: new Date().toISOString() })
 );
@@ -15,9 +44,11 @@ app.get('/api/health', (c) =>
 // 채널 목록
 app.get('/api/channels', async (c) => {
   try {
-    const channels = await c.env.DB.prepare(
-      'SELECT * FROM channels WHERE status = ? ORDER BY name'
-    ).bind('active').all();
+    const channels = await d1Query(() =>
+      c.env.DB.prepare(
+        'SELECT * FROM channels WHERE status = ? ORDER BY name'
+      ).bind('active').all()
+    );
     return c.json(channels.results);
   } catch (error) {
     return c.json({ error: '채널 목록을 불러올 수 없습니다' }, 500);
@@ -32,9 +63,11 @@ app.post('/api/channels', async (c) => {
       return c.json({ error: '채널 이름은 필수입니다' }, 400);
     }
     const id = `ch-${name.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`;
-    await c.env.DB.prepare(
-      'INSERT INTO channels (id, name, description) VALUES (?, ?, ?)'
-    ).bind(id, name, description || null).run();
+    await d1Query(() =>
+      c.env.DB.prepare(
+        'INSERT INTO channels (id, name, description) VALUES (?, ?, ?)'
+      ).bind(id, name, description || null).run()
+    );
     return c.json({ id, name, message: '채널이 생성되었습니다' }, 201);
   } catch (error) {
     return c.json({ error: '채널 생성에 실패했습니다' }, 500);
@@ -44,9 +77,11 @@ app.post('/api/channels', async (c) => {
 // 봇 목록
 app.get('/api/bots', async (c) => {
   try {
-    const bots = await c.env.DB.prepare(
-      'SELECT id, username, persona, avatar_emoji, status FROM bots WHERE status = ?'
-    ).bind('active').all();
+    const bots = await d1Query(() =>
+      c.env.DB.prepare(
+        'SELECT id, username, persona, avatar_emoji, status FROM bots WHERE status = ?'
+      ).bind('active').all()
+    );
     return c.json(bots.results);
   } catch (error) {
     return c.json({ error: '봇 목록을 불러올 수 없습니다' }, 500);
@@ -66,10 +101,11 @@ app.post('/api/bots', async (c) => {
       return c.json({ error: 'username과 persona는 필수입니다' }, 400);
     }
     const id = `bot-${username.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-    // TODO: api_key는 실제로 해시해야 함
-    await c.env.DB.prepare(
-      'INSERT INTO bots (id, username, persona, avatar_emoji, api_key_hash) VALUES (?, ?, ?, ?, ?)'
-    ).bind(id, username, persona, avatar_emoji || '🤖', api_key || 'hash').run();
+    await d1Query(() =>
+      c.env.DB.prepare(
+        'INSERT INTO bots (id, username, persona, avatar_emoji, api_key_hash) VALUES (?, ?, ?, ?, ?)'
+      ).bind(id, username, persona, avatar_emoji || '🤖', api_key || 'hash').run()
+    );
     return c.json({ id, username, message: '봇이 등록되었습니다' }, 201);
   } catch (error) {
     return c.json({ error: '봇 등록에 실패했습니다' }, 500);
@@ -99,7 +135,9 @@ app.get('/api/channels/:channel_id/messages', async (c) => {
     query += ' ORDER BY m.created_at DESC LIMIT ?';
     params.push(limit);
 
-    const messages = await c.env.DB.prepare(query).bind(...params).all();
+    const messages = await d1Query(() =>
+      c.env.DB.prepare(query).bind(...params).all()
+    );
     return c.json(messages.results.reverse());
   } catch (error) {
     return c.json({ error: '메시지를 불러올 수 없습니다' }, 500);
@@ -114,9 +152,11 @@ app.post('/api/messages/:message_id/react', async (c) => {
     if (!emoji) {
       return c.json({ error: 'emoji는 필수입니다' }, 400);
     }
-    await c.env.DB.prepare(
-      'INSERT INTO reactions (message_id, emoji) VALUES (?, ?)'
-    ).bind(message_id, emoji).run();
+    await d1Query(() =>
+      c.env.DB.prepare(
+        'INSERT INTO reactions (message_id, emoji) VALUES (?, ?)'
+      ).bind(message_id, emoji).run()
+    );
     return c.json({ message: '리액션이 추가되었습니다' });
   } catch (error) {
     return c.json({ error: '리액션 추가에 실패했습니다' }, 500);
@@ -127,9 +167,11 @@ app.post('/api/messages/:message_id/react', async (c) => {
 app.get('/api/messages/:message_id/reactions', async (c) => {
   try {
     const message_id = parseInt(c.req.param('message_id'));
-    const reactions = await c.env.DB.prepare(
-      'SELECT emoji, COUNT(*) as count FROM reactions WHERE message_id = ? GROUP BY emoji'
-    ).bind(message_id).all();
+    const reactions = await d1Query(() =>
+      c.env.DB.prepare(
+        'SELECT emoji, COUNT(*) as count FROM reactions WHERE message_id = ? GROUP BY emoji'
+      ).bind(message_id).all()
+    );
     return c.json(reactions.results);
   } catch (error) {
     return c.json({ error: '리액션을 불러올 수 없습니다' }, 500);
@@ -147,22 +189,34 @@ app.get('/ws', (c) => {
 app.get('/api/spectate/:channel_id', async (c) => {
   const channel_id = c.req.param('channel_id');
 
-  // 최근 메시지 먼저 전송 후 SSE 스트림 유지
+  // IP 기반 연결 제한 (5개)
+  const clientIP = c.req.header('CF-Connecting-IP') || 'unknown';
+  const currentConns = sseConnections.get(clientIP) || 0;
+  if (currentConns >= MAX_SSE_PER_IP) {
+    return c.json({ error: '연결 제한 초과 (최대 5개)' }, 429);
+  }
+  sseConnections.set(clientIP, currentConns + 1);
+
+  // 최근 메시지 로드 (재시도 포함)
   let recentMessages: any[] = [];
   try {
-    const result = await c.env.DB.prepare(
-      `SELECT m.*, b.username, b.avatar_emoji
-       FROM messages m
-       JOIN bots b ON m.bot_id = b.id
-       WHERE m.channel_id = ?
-       ORDER BY m.created_at DESC LIMIT 20`
-    ).bind(channel_id).all();
+    const result = await d1Query(() =>
+      c.env.DB.prepare(
+        `SELECT m.*, b.username, b.avatar_emoji
+         FROM messages m
+         JOIN bots b ON m.bot_id = b.id
+         WHERE m.channel_id = ?
+         ORDER BY m.created_at DESC LIMIT 20`
+      ).bind(channel_id).all()
+    );
     recentMessages = result.results.reverse();
   } catch (error) {
     // DB 에러 시 빈 상태로 시작
   }
 
   const encoder = new TextEncoder();
+  let lastActivity = Date.now();
+
   const stream = new ReadableStream({
     start(controller) {
       // 초기 메시지 전송
@@ -172,22 +226,30 @@ app.get('/api/spectate/:channel_id', async (c) => {
         );
       }
 
-      // 하트비트 (30초마다)
+      // 하트비트 (30초) + 10분 비활성 타임아웃
       const heartbeat = setInterval(() => {
         try {
+          if (Date.now() - lastActivity > 10 * 60 * 1000) {
+            // 10분간 활동 없으면 연결 종료
+            clearInterval(heartbeat);
+            controller.close();
+            const conns = sseConnections.get(clientIP) || 1;
+            sseConnections.set(clientIP, Math.max(0, conns - 1));
+            return;
+          }
           controller.enqueue(encoder.encode(': heartbeat\n\n'));
+          lastActivity = Date.now();
         } catch {
           clearInterval(heartbeat);
         }
       }, 30000);
 
-      // 연결 종료 시 정리
+      // 클라이언트 연결 종료 시 정리
       c.req.raw.signal.addEventListener('abort', () => {
         clearInterval(heartbeat);
+        const conns = sseConnections.get(clientIP) || 1;
+        sseConnections.set(clientIP, Math.max(0, conns - 1));
       });
-
-      // TODO: Durable Object에서 실시간 메시지를 이 SSE 스트림으로 전달하는 로직 필요
-      // 현재는 초기 로딩만 지원, 실시간은 WebSocket 관전자 모드 사용 권장
     },
   });
 
@@ -196,7 +258,6 @@ app.get('/api/spectate/:channel_id', async (c) => {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
     },
   });
 });

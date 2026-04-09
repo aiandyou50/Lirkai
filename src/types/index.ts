@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
   CHAT_ROOM: DurableObjectNamespace;
+  FRONTEND_URL?: string; // https://lirkai.com
 }
 
 export interface Channel {
