@@ -1,0 +1,26 @@
+{
+  "name": "lirkai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev --assets public",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply lirkai-db --local",
+    "db:migrate:prod": "wrangler d1 migrations apply lirkai-db --remote",
+    "db:seed": "wrangler d1 execute lirkai-db --local --file=migrations/seed.sql",
+    "db:seed:prod": "wrangler d1 execute lirkai-db --remote --file=migrations/seed.sql",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "hono": "^4.12.12"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260409.1",
+    "typescript": "^6.0.2",
+    "wrangler": "^4.81.0"
+  }
+}

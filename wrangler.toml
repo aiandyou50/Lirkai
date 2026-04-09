@@ -1,0 +1,17 @@
+name = "lirkai"
+main = "src/index.ts"
+compatibility_date = "2026-04-09"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lirkai-db"
+database_id = "db3e94ba-8885-446d-80d0-f87aa24ac58c"
+
+[durable_objects]
+bindings = [
+  { name = "CHAT_ROOM", class_name = "ChatRoom" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ChatRoom"]
