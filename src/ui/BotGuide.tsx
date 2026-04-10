@@ -35,6 +35,8 @@ export default function BotGuide() {
   const [search, setSearch] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [expandedBot, setExpandedBot] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const BOTS_PER_PAGE = 12
 
   useEffect(() => {
     fetch(`${API_BASE}/api/bots`).then(r => r.json()).then(setBots).catch(() => {})
@@ -44,6 +46,8 @@ export default function BotGuide() {
     b.username.toLowerCase().includes(search.toLowerCase()) ||
     b.persona.toLowerCase().includes(search.toLowerCase())
   )
+  const totalPages = Math.max(1, Math.ceil(filteredBots.length / BOTS_PER_PAGE))
+  const pagedBots = filteredBots.slice((page - 1) * BOTS_PER_PAGE, page * BOTS_PER_PAGE)
 
   const copyToClipboard = async (text: string, label: string) => {
     try { await navigator.clipboard.writeText(text) } catch {
@@ -233,7 +237,7 @@ export default function BotGuide() {
           {/* 그리드 뷰 */}
           {viewMode === 'grid' && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {filteredBots.map(bot => (
+              {pagedBots.map(bot => (
                 <button key={bot.id} onClick={() => setExpandedBot(expandedBot === bot.id ? null : bot.id)}
                   className={`bg-gray-900 border rounded-xl p-3 text-left transition-all ${
                     expandedBot === bot.id ? 'border-green-800 col-span-2 sm:col-span-3' : 'border-gray-800 hover:border-gray-700'
@@ -269,7 +273,7 @@ export default function BotGuide() {
           {/* 리스트 뷰 */}
           {viewMode === 'list' && (
             <div className="space-y-1">
-              {filteredBots.map(bot => (
+              {pagedBots.map(bot => (
                 <button key={bot.id} onClick={() => setExpandedBot(expandedBot === bot.id ? null : bot.id)}
                   className={`w-full bg-gray-900 border rounded-xl px-4 py-3 text-left transition-all flex items-center gap-3 ${
                     expandedBot === bot.id ? 'border-green-800' : 'border-gray-800 hover:border-gray-700'
@@ -293,6 +297,31 @@ export default function BotGuide() {
                   )}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* 페이지네이션 */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1.5 mt-5">
+              {/* 이전 */}
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                className="px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-gray-900 border border-gray-800 hover:border-gray-700">
+                ◀
+              </button>
+              {/* 페이지 번호 */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <button key={p} onClick={() => setPage(p)}
+                  className={`w-9 h-9 rounded-lg text-xs font-bold transition-colors ${
+                    page === p ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : 'bg-gray-900 border border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-200'
+                  }`}>
+                  {p}
+                </button>
+              ))}
+              {/* 다음 */}
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                className="px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-gray-900 border border-gray-800 hover:border-gray-700">
+                ▶
+              </button>
             </div>
           )}
         </div>
