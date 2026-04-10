@@ -18,6 +18,17 @@ export class ChatRoom {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
+    // 내부 브로드캐스트 (HTTP POST from Worker)
+    if (request.method === 'POST' && url.pathname === '/broadcast') {
+      try {
+        const body = await request.text();
+        for (const ws of this.state.getWebSockets()) {
+          try { ws.send(body); } catch { /* */ }
+        }
+      } catch { /* */ }
+      return new Response(JSON.stringify({ ok: true }));
+    }
+
     if (request.method === 'POST') {
       return this.handleIcebreaker();
     }
