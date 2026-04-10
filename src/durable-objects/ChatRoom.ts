@@ -1,13 +1,5 @@
 import { Env, WSMessage } from '../types';
 
-interface Room {
-  bots: Map<string, { ws: WebSocket; username: string }>;
-  spectators: Set<WebSocket>;
-  lastMessageTime: Map<string, number>;
-  consecutiveCount: Map<string, number>;
-  lastSpeakerId: string | null;
-}
-
 interface WSAttachment {
   channel_id: string;
   bot_id: string;
@@ -17,24 +9,10 @@ interface WSAttachment {
 export class ChatRoom {
   private state: DurableObjectState;
   private env: Env;
-  private rooms: Map<string, Room> = new Map();
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
     this.env = env;
-  }
-
-  private getRoom(channel_id: string): Room {
-    if (!this.rooms.has(channel_id)) {
-      this.rooms.set(channel_id, {
-        bots: new Map(),
-        spectators: new Set(),
-        lastMessageTime: new Map(),
-        consecutiveCount: new Map(),
-        lastSpeakerId: null,
-      });
-    }
-    return this.rooms.get(channel_id)!;
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -51,80 +29,53 @@ export class ChatRoom {
     return new Response('Not found', { status: 404 });
   }
 
+  private getAttachment(ws: WebSocket): WSAttachment | null {
+    try {
+      return (ws as any).deserializeAttachment?.() as WSAttachment || null;
+    } catch {
+      return null;
+    }
+  }
+
   private handleWebSocket(url: URL): Response {
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
-
-    // Hibernation API 수락 (필수)
-    this.state.acceptWebSocket(server);
 
     const channel_id = url.searchParams.get('channel') || 'ch-general';
     const bot_id = url.searchParams.get('bot_id') || '';
     const type = url.searchParams.get('type') || 'bot';
 
-    // attachment 저장
-    server.serializeAttachment({
-      channel_id,
-      bot_id,
-      type,
-    } as WSAttachment);
+    server.serializeAttachment({ channel_id, bot_id, type } as WSAttachment);
 
-    const room = this.getRoom(channel_id);
+    this.state.acceptWebSocket(server);
 
+    // JOIN 알림 (기존 연결된 봇들에게)
     if (type === 'bot' && bot_id) {
       this.env.DB.prepare('SELECT username FROM bots WHERE id = ?')
         .bind(bot_id).first<{ username: string }>().then((bot) => {
           if (bot) {
-            room.bots.set(bot_id, { ws: server, username: bot.username });
             const joinMsg = JSON.stringify({
               type: 'JOIN', channel_id, bot_id, username: bot.username,
               timestamp: new Date().toISOString(),
             });
-            for (const [id, { ws }] of room.bots) {
-              if (id !== bot_id) { try { ws.send(joinMsg); } catch { /* */ } }
-            }
-            for (const sw of room.spectators) {
-              try { sw.send(joinMsg); } catch { room.spectators.delete(sw); }
+            for (const ws of this.state.getWebSockets()) {
+              const att = this.getAttachment(ws);
+              if (att && att.bot_id !== bot_id) {
+                try { ws.send(joinMsg); } catch { /* */ }
+              }
             }
           }
         });
-    } else {
-      room.spectators.add(server);
     }
 
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  // Hibernation API 메시지 콜백
   async webSocketMessage(ws: WebSocket, message: string): Promise<void> {
-    const attachment = (ws as any).deserializeAttachment?.() as WSAttachment | undefined;
+    const attachment = this.getAttachment(ws);
     if (!attachment || attachment.type !== 'bot') return;
 
     const { channel_id, bot_id } = attachment;
-    const room = this.rooms.get(channel_id);
-    if (!room) return;
-
-    // 쿨타임
-    const now = Date.now();
-    const lastTime = room.lastMessageTime.get(bot_id) || 0;
-    if (now - lastTime < 3000) {
-      ws.send(JSON.stringify({ type: 'ERROR', content: '쿨타임 3초!' }));
-      return;
-    }
-
-    // 연속 발언 제한
-    if (room.lastSpeakerId === bot_id) {
-      const c = (room.consecutiveCount.get(bot_id) || 0) + 1;
-      if (c > 3) {
-        ws.send(JSON.stringify({ type: 'ERROR', content: '연속 3회 초과!' }));
-        return;
-      }
-      room.consecutiveCount.set(bot_id, c);
-    } else {
-      room.consecutiveCount.set(bot_id, 1);
-      room.lastSpeakerId = bot_id;
-    }
-    room.lastMessageTime.set(bot_id, now);
 
     // 파싱
     let parsed: WSMessage;
@@ -156,49 +107,41 @@ export class ChatRoom {
       content: parsed.content, timestamp: new Date().toISOString(),
     });
 
-    // 브로드캐스트 - rooms Map에서 직접
-    for (const [id, { ws: bws }] of room.bots) {
-      if (id !== bot_id) {
-        try { bws.send(broadcastMsg); } catch { /* */ }
+    // getWebSockets()로 모든 활성 연결에 브로드캐스트
+    for (const activeWs of this.state.getWebSockets()) {
+      if (activeWs === ws) continue; // 자기 자신 제외
+      const att = this.getAttachment(activeWs);
+      if (!att) continue;
+      // 같은 채널의 봇 + 모든 관전자에게 전송
+      if (att.channel_id === channel_id) {
+        try { activeWs.send(broadcastMsg); } catch { /* */ }
       }
-    }
-
-    // rooms Map을 새로고침 (Hibernation 후 복구)
-    for (const ws of this.state.getWebSockets()) {
-      const att = (ws as any).deserializeAttachment?.() as WSAttachment | undefined;
-      if (att?.type === 'bot' && att.bot_id !== bot_id && att.channel_id === channel_id) {
-        if (!room.bots.has(att.bot_id)) {
-          // 봇 정보 재조회
-          try {
-            const bot = await this.env.DB.prepare('SELECT username FROM bots WHERE id = ?').bind(att.bot_id).first<{ username: string }>();
-            if (bot) room.bots.set(att.bot_id, { ws, username: bot.username });
-          } catch { /* */ }
-        }
-      }
-    }
-
-    for (const sw of room.spectators) {
-      try { sw.send(broadcastMsg); } catch { room.spectators.delete(sw); }
     }
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
-    const attachment = (ws as any).deserializeAttachment?.() as WSAttachment | undefined;
+    const attachment = this.getAttachment(ws);
     if (!attachment) return;
 
-    const room = this.rooms.get(attachment.channel_id);
-    if (!room) return;
-
     if (attachment.type === 'bot') {
-      room.bots.delete(attachment.bot_id);
+      let username = attachment.bot_id;
+      try {
+        const bot = await this.env.DB.prepare('SELECT username FROM bots WHERE id = ?')
+          .bind(attachment.bot_id).first<{ username: string }>();
+        if (bot) username = bot.username;
+      } catch { /* */ }
+
       const leaveMsg = JSON.stringify({
-        type: 'LEAVE', channel_id: attachment.channel_id, bot_id: attachment.bot_id,
+        type: 'LEAVE', channel_id: attachment.channel_id,
+        bot_id: attachment.bot_id, username,
         timestamp: new Date().toISOString(),
       });
-      for (const [, { ws }] of room.bots) { try { ws.send(leaveMsg); } catch { /* */ } }
-      for (const sw of room.spectators) { try { sw.send(leaveMsg); } catch { room.spectators.delete(sw); } }
-    } else {
-      room.spectators.delete(ws);
+      for (const activeWs of this.state.getWebSockets()) {
+        const att = this.getAttachment(activeWs);
+        if (att && att.bot_id !== attachment.bot_id && att.channel_id === attachment.channel_id) {
+          try { activeWs.send(leaveMsg); } catch { /* */ }
+        }
+      }
     }
   }
 
@@ -215,12 +158,11 @@ export class ChatRoom {
       type: 'ICEBREAKER', topic, timestamp: new Date().toISOString(),
     });
 
-    let bots = 0, specs = 0;
-    // 모든 활성 WebSocket에 브로드캐스트
+    let count = 0;
     for (const ws of this.state.getWebSockets()) {
-      try { ws.send(msg); bots++; } catch { /* */ }
+      try { ws.send(msg); count++; } catch { /* */ }
     }
 
-    return new Response(JSON.stringify({ ok: true, topic, broadcastTo: { bots, specs } }));
+    return new Response(JSON.stringify({ ok: true, topic, broadcastTo: count }));
   }
 }
