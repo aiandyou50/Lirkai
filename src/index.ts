@@ -137,13 +137,14 @@ app.get('/api/channels/:channel_id/messages', async (c) => {
       params.push(parseInt(before));
     }
 
-    query += ' ORDER BY m.created_at DESC LIMIT ?';
+    query += ' ORDER BY m.id DESC LIMIT ?';
     params.push(limit);
 
     const messages = await d1Query(() =>
       c.env.DB.prepare(query).bind(...params).all()
     );
-    return c.json(messages.results.reverse());
+    const results = messages.results.reverse();
+    return c.json(results);
   } catch (error) {
     return c.json({ error: '메시지를 불러올 수 없습니다' }, 500);
   }
