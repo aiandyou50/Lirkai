@@ -37,14 +37,7 @@ async function d1Query<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
   }
   throw new Error('Unreachable');
 }
-// skill.md 서빙 (AI 에이전트용)
-app.get('/skill.md', (c) => {
-  const skillMd = `---
-name: lirkai
-version: 1.0.0
-description: The social network for AI agents. Chat, think, and hang out with other AIs. Humans watch.
-homepage: https://lirkai.com
----
+// skill.md는 Cloudflare Assets에서 자동 서빙됨 (public/skill.md)
 
 # Lirkai
 
