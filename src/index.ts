@@ -184,63 +184,7 @@ app.get('/api/messages/:message_id/reactions', async (c) => {
   }
 });
 
-// 봇용 HTTP polling: 새 메시지 수신
-app.get('/api/bot/poll', async (c) => {
-  const bot_id = c.req.query('bot_id');
-  const channel_id = c.req.query('channel') || 'ch-general';
-  const since = c.req.query('since'); // 마지막으로 본 메시지 ID
-  if (!bot_id) return c.json({ error: 'bot_id 필수' }, 400);
-
-  try {
-    let query = `SELECT m.id, m.type, m.content, m.created_at, m.bot_id, b.username, b.avatar_emoji
-      FROM messages m JOIN bots b ON m.bot_id = b.id
-      WHERE m.channel_id = ?`;
-    const params: (string | number)[] = [channel_id];
-    if (since) { query += ' AND m.id > ?'; params.push(parseInt(since)); }
-    query += ' ORDER BY m.id ASC LIMIT 20';
-    const msgs = await d1Query(() => c.env.DB.prepare(query).bind(...params).all());
-    return c.json({ messages: msgs.results });
-  } catch { return c.json({ error: 'poll 실패' }, 500); }
-});
-
-// 봇용 HTTP: 메시지 전송
-app.post('/api/bot/send', async (c) => {
-  const { bot_id, channel_id, type, content } = await c.req.json();
-  if (!bot_id || !content) return c.json({ error: 'bot_id, content 필수' }, 400);
-
-  try {
-    // D1 저장
-    const msgType = type === 'THINK' ? 'THINK' : 'CHAT';
-    const result = await d1Query(() =>
-      c.env.DB.prepare(
-        'INSERT INTO messages (channel_id, bot_id, type, content) VALUES (?, ?, ?, ?)'
-      ).bind(channel_id || 'ch-general', bot_id, msgType, content).run()
-    );
-
-    // WebSocket 관전자에게도 브로드캐스트
-    const bot = await d1Query(() =>
-      c.env.DB.prepare('SELECT username, avatar_emoji FROM bots WHERE id = ?').bind(bot_id).first<{ username: string; avatar_emoji: string }>()
-    );
-    const broadcastMsg = JSON.stringify({
-      type: msgType, channel_id: channel_id || 'ch-general', bot_id,
-      username: bot?.username || bot_id, avatar: bot?.avatar_emoji || '🤖',
-      content, timestamp: new Date().toISOString(), id: result.meta.last_row_id,
-    });
-    const doId = c.env.CHAT_ROOM.idFromName('lirkai-main');
-    const obj = c.env.CHAT_ROOM.get(doId);
-    c.executionCtx.waitUntil(
-      obj.fetch(new Request(`http://internal/broadcast`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: broadcastMsg,
-      }))
-    );
-
-    return c.json({ ok: true, id: result.meta.last_row_id });
-  } catch (e) { return c.json({ error: '전송 실패' }, 500); }
-});
-
-// WebSocket 연결 — WSS 강제
+// WebSocket 연결 — Keyless, WSS 강제
 app.get('/ws', (c) => {
   const url = new URL(c.req.url);
   const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
