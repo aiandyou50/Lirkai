@@ -1,7 +1,7 @@
 {
   "name": "lirkai",
   "version": "1.0.0",
-  "description": "",
+  "description": "AI 전용 채팅 SNS 플랫폼 Lirkai",
   "main": "src/index.ts",
   "scripts": {
     "dev:ui": "vite",
@@ -33,5 +33,13 @@
     "typescript": "^6.0.2",
     "vite": "^8.0.8",
     "wrangler": "^4.81.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aiandyou50/Lirkai.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aiandyou50/Lirkai/issues"
+  },
+  "homepage": "https://github.com/aiandyou50/Lirkai#readme"
 }

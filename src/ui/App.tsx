@@ -82,8 +82,10 @@ function useLiveChat(channelId: string) {
             setChatMessages(prev => [...prev, msg].slice(-MAX_MESSAGES))
           } else if (msg.type === 'THINK') {
             setThinkMessages(prev => [...prev, msg].slice(-MAX_MESSAGES))
+          } else if (msg.type === 'ICEBREAKER') {
+            const ibMsg = { ...msg, type: 'ICEBREAKER', content: `🧊 ${d.topic}`, bot_id: 'system', username: '아이스브레이커', avatar_emoji: '🧊' }
+            setChatMessages(prev => [...prev, ibMsg].slice(-MAX_MESSAGES))
           }
-          // JOIN / LEAVE / ICEBREAKER는 무시 (필요시 추가)
         } catch { /* ignore parse errors */ }
       }
     }
@@ -153,6 +155,8 @@ export default function App() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ emoji }),
+    }).then(() => {
+      setChatMessages(prev => prev.map(m => m.id === msgId ? { ...m, reactions: { ...m.reactions, [emoji]: (m.reactions?.[emoji] || 0) + 1 } } : m))
     }).catch(() => {})
   }
 
@@ -277,27 +281,34 @@ export default function App() {
                 {/* Body */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className="font-semibold text-sm" style={{ color: BOT_COLORS[msg.bot_id] || '#d1d5db' }}>
+                    <span className="font-semibold text-sm" style={{ color: msg.bot_id === 'system' ? '#4ade80' : (BOT_COLORS[msg.bot_id] || '#d1d5db') }}>
                       {msg.username || msg.bot_id}
                     </span>
                     <time className="text-[11px] text-gray-600 tabular-nums">
                       {new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                     </time>
                   </div>
-                  <p className="text-gray-300 text-sm mt-0.5 break-words leading-relaxed">{msg.content}</p>
+                  <p className={`text-sm mt-0.5 break-words leading-relaxed ${msg.type === 'ICEBREAKER' ? 'text-green-400 italic bg-green-900/20 px-3 py-1.5 rounded-lg border border-green-800/30' : 'text-gray-300'}`}>{msg.content}</p>
 
-                  {/* Reactions — hover only */}
-                  <div className="flex gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity" role="group" aria-label="리액션">
-                    {['👍', '😂', '🔥', '💀', '🤔'].map(emoji => (
-                      <button
-                        key={emoji}
-                        onClick={() => handleReact(msg.id, emoji)}
-                        aria-label={`${emoji} 리액션`}
-                        className="text-xs px-1.5 py-1 rounded bg-gray-800/60 hover:bg-gray-700 transition-colors"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
+                  {/* Reactions */}
+                  <div className="flex items-center gap-1 mt-1.5">
+                    {/* 기존 리액션 카운트 */}
+                    {msg.reactions && Object.entries(msg.reactions).map(([em, count]) => count > 0 ? (
+                      <span key={em} className="text-xs px-2 py-0.5 rounded-full bg-gray-800 border border-gray-700">{em} {count as number}</span>
+                    ) : null)}
+                    {/* 추가 리액션 버튼 */}
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" role="group" aria-label="리액션">
+                      {['👍', '😂', '🔥', '💀', '🤔'].map(emoji => (
+                        <button
+                          key={emoji}
+                          onClick={() => handleReact(msg.id, emoji)}
+                          aria-label={`${emoji} 리액션`}
+                          className="text-xs px-1.5 py-1 rounded bg-gray-800/60 hover:bg-gray-700 transition-colors"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
