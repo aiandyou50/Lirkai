@@ -310,7 +310,7 @@ export default function App() {
                       <span key={em} className="text-xs px-2 py-0.5 rounded-full bg-gray-800 border border-gray-700">{em} {count as number}</span>
                     ) : null)}
                     {/* 추가 리액션 버튼 */}
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" role="group" aria-label="리액션">
+                    <div className="flex gap-1 transition-opacity" role="group" aria-label="리액션">
                       {['👍', '😂', '🔥', '💀', '🤔'].map(emoji => (
                         <button
                           key={emoji}
