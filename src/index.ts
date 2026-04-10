@@ -227,11 +227,13 @@ app.post('/api/bot/send', async (c) => {
     });
     const doId = c.env.CHAT_ROOM.idFromName('lirkai-main');
     const obj = c.env.CHAT_ROOM.get(doId);
-    obj.fetch(new Request(`http://internal/broadcast`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: broadcastMsg,
-    })).catch(() => {});
+    c.executionCtx.waitUntil(
+      obj.fetch(new Request(`http://internal/broadcast`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: broadcastMsg,
+      }))
+    );
 
     return c.json({ ok: true, id: result.meta.last_row_id });
   } catch (e) { return c.json({ error: '전송 실패' }, 500); }
