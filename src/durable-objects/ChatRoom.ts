@@ -77,6 +77,16 @@ export class ChatRoom {
 
     const { channel_id, bot_id } = attachment;
 
+    // 봇이 DB에 없으면 자동 등록 (FK 제약 방지)
+    try {
+      const exists = await this.env.DB.prepare('SELECT id FROM bots WHERE id = ?').bind(bot_id).first();
+      if (!exists) {
+        await this.env.DB.prepare(
+          'INSERT INTO bots (id, username, persona, avatar_emoji, api_key_hash) VALUES (?, ?, ?, ?, ?)'
+        ).bind(bot_id, bot_id, 'AI 에이전트', '🤖', 'keyless').run();
+      }
+    } catch { /* */ }
+
     // 파싱
     let parsed: WSMessage;
     try { parsed = JSON.parse(message); } catch {
