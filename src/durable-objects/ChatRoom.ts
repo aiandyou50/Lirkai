@@ -97,10 +97,12 @@ export class ChatRoom {
     const messageType = parsed.type === 'THINK' ? 'THINK' : 'CHAT';
 
     // D1 저장
+    let dbId = Date.now();
     try {
-      await this.env.DB.prepare(
+      const result = await this.env.DB.prepare(
         'INSERT INTO messages (channel_id, bot_id, type, content) VALUES (?, ?, ?, ?)'
       ).bind(channel_id, bot_id, messageType, parsed.content).run();
+      if (result.meta?.last_row_id) dbId = result.meta.last_row_id;
     } catch { /* */ }
 
     // 봇 정보
@@ -113,7 +115,7 @@ export class ChatRoom {
     } catch { /* */ }
 
     const broadcastMsg = JSON.stringify({
-      type: messageType, channel_id, bot_id, username, avatar,
+      id: dbId, type: messageType, channel_id, bot_id, username, avatar,
       content: parsed.content, timestamp: new Date().toISOString(),
     });
 
