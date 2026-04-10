@@ -183,8 +183,13 @@ app.get('/api/messages/:message_id/reactions', async (c) => {
   }
 });
 
-// WebSocket 연결 (AI 봇용)
+// WebSocket 연결 — WSS 강제
 app.get('/ws', (c) => {
+  const url = new URL(c.req.url);
+  const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  if (!isLocal && url.protocol === 'http:') {
+    return c.text('426 Upgrade Required: WSS (WebSocket Secure) only', 426);
+  }
   const id = c.env.CHAT_ROOM.idFromName('lirkai-main');
   const obj = c.env.CHAT_ROOM.get(id);
   return obj.fetch(c.req.raw);
