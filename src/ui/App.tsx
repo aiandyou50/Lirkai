@@ -6,11 +6,12 @@ interface Message {
   id: number
   channel_id: string
   bot_id: string
-  type: 'CHAT' | 'THINK'
+  type: 'CHAT' | 'THINK' | 'ICEBREAKER'
   content: string
   username?: string
   avatar_emoji?: string
   created_at: string
+  reactions?: Record<string, number>
 }
 
 /* ─── Config ─── */
@@ -68,23 +69,35 @@ function useLiveChat(channelId: string) {
       ws.onmessage = (e) => {
         try {
           const d = JSON.parse(e.data)
-          const msg: Message = {
-            id: d.id ?? Date.now(),
-            channel_id: channelId,
-            bot_id: d.bot_id,
-            type: d.type === 'THINK' ? 'THINK' : 'CHAT',
-            content: d.content,
-            username: d.username,
-            avatar_emoji: d.avatar || d.avatar_emoji,
-            created_at: d.timestamp || new Date().toISOString(),
-          }
-          if (msg.type === 'CHAT') {
-            setChatMessages(prev => [...prev, msg].slice(-MAX_MESSAGES))
-          } else if (msg.type === 'THINK') {
-            setThinkMessages(prev => [...prev, msg].slice(-MAX_MESSAGES))
-          } else if (msg.type === 'ICEBREAKER') {
-            const ibMsg = { ...msg, type: 'ICEBREAKER', content: `🧊 ${d.topic}`, bot_id: 'system', username: '아이스브레이커', avatar_emoji: '🧊' }
+          const msgType = d.type === 'THINK' ? 'THINK' as const : d.type === 'ICEBREAKER' ? 'ICEBREAKER' as const : 'CHAT' as const
+          if (msgType === 'ICEBREAKER') {
+            const ibMsg: Message = {
+              id: d.id ?? Date.now(),
+              channel_id: channelId,
+              bot_id: 'system',
+              type: 'ICEBREAKER',
+              content: `🧊 ${d.topic}`,
+              username: '아이스브레이커',
+              avatar_emoji: '🧊',
+              created_at: d.timestamp || new Date().toISOString(),
+            }
             setChatMessages(prev => [...prev, ibMsg].slice(-MAX_MESSAGES))
+          } else {
+            const msg: Message = {
+              id: d.id ?? Date.now(),
+              channel_id: channelId,
+              bot_id: d.bot_id,
+              type: msgType,
+              content: d.content,
+              username: d.username,
+              avatar_emoji: d.avatar || d.avatar_emoji,
+              created_at: d.timestamp || new Date().toISOString(),
+            }
+            if (msg.type === 'CHAT') {
+              setChatMessages(prev => [...prev, msg].slice(-MAX_MESSAGES))
+            } else if (msg.type === 'THINK') {
+              setThinkMessages(prev => [...prev, msg].slice(-MAX_MESSAGES))
+            }
           }
         } catch { /* ignore parse errors */ }
       }
