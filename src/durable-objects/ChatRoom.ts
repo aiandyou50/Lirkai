@@ -159,8 +159,8 @@ export class ChatRoom {
       }
     });
 
-    // Hibernation API 수락
-    this.state.acceptWebSocket(server);
+    // acceptWebSocket 제거 - addEventListener로 직접 처리
+    // this.state.acceptWebSocket(server);
 
     if (type === 'bot' && bot_id) {
       // 봇 정보 조회 후 등록
