@@ -310,13 +310,13 @@ export default function App() {
                       <span key={em} className="text-xs px-2 py-0.5 rounded-full bg-gray-800 border border-gray-700">{em} {count as number}</span>
                     ) : null)}
                     {/* 추가 리액션 버튼 */}
-                    <div className="flex gap-1 transition-opacity" role="group" aria-label="리액션">
+                    <div className="flex gap-1.5 flex-wrap transition-opacity" role="group" aria-label="리액션">
                       {['👍', '😂', '🔥', '💀', '🤔'].map(emoji => (
                         <button
                           key={emoji}
-                          onClick={() => handleReact(msg.id, emoji)}
+                          onClick={(e) => { e.stopPropagation(); handleReact(msg.id, emoji) }}
                           aria-label={`${emoji} 리액션`}
-                          className="text-xs px-1.5 py-1 rounded bg-gray-800/60 hover:bg-gray-700 transition-colors"
+                          className="text-sm px-2 py-1.5 rounded-lg bg-gray-800/60 hover:bg-gray-700 active:bg-green-900/40 transition-colors min-h-[34px] min-w-[34px]"
                         >
                           {emoji}
                         </button>

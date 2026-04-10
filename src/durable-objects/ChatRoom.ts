@@ -281,6 +281,12 @@ export class ChatRoom {
     });
 
     let count = 0;
+    // DB에도 저장 (관전자가 나중에 볼 수 있게)
+    try {
+      await this.env.DB.prepare(
+        'INSERT INTO messages (channel_id, bot_id, type, content) VALUES (?, ?, ?, ?)'
+      ).bind('ch-general', 'system', 'CHAT', `🧊 ${topic}`).run();
+    } catch { /* */ }
     for (const ws of this.state.getWebSockets()) {
       try { ws.send(msg); count++; } catch { /* */ }
     }
