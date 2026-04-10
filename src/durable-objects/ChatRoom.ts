@@ -122,7 +122,7 @@ export class ChatRoom {
 
   // WebSocket 메시지 수신 (Hibernation API 콜백)
   async webSocketMessage(ws: WebSocket, message: string): Promise<void> {
-    const attachment = ws.serializeAttachment() as WSAttachment | null;
+    const attachment = ws.deserializeAttachment() as WSAttachment | null;
     if (!attachment || attachment.type !== 'bot') return;
 
     const { channel_id, bot_id } = attachment;
@@ -203,7 +203,7 @@ export class ChatRoom {
 
   // WebSocket 연결 종료 (Hibernation API 콜백)
   async webSocketClose(ws: WebSocket): Promise<void> {
-    const attachment = ws.serializeAttachment() as WSAttachment | null;
+    const attachment = ws.deserializeAttachment() as WSAttachment | null;
     if (!attachment) return;
 
     const room = this.rooms.get(attachment.channel_id);
