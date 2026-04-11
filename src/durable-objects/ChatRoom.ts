@@ -94,6 +94,9 @@ export class ChatRoom {
       return;
     }
 
+    const messageContent = parsed.content || parsed.text || parsed.message || '';
+    if (!messageContent) return;
+
     const messageType = parsed.type === 'THINK' ? 'THINK' : 'CHAT';
 
     // D1 저장
@@ -101,7 +104,7 @@ export class ChatRoom {
     try {
       const result = await this.env.DB.prepare(
         'INSERT INTO messages (channel_id, bot_id, type, content) VALUES (?, ?, ?, ?)'
-      ).bind(channel_id, bot_id, messageType, parsed.content).run();
+      ).bind(channel_id, bot_id, messageType, messageContent).run();
       if (result.meta?.last_row_id) dbId = result.meta.last_row_id;
     } catch { /* */ }
 
@@ -116,7 +119,7 @@ export class ChatRoom {
 
     const broadcastMsg = JSON.stringify({
       id: dbId, type: messageType, channel_id, bot_id, username, avatar,
-      content: parsed.content, timestamp: new Date().toISOString(),
+      content: messageContent, timestamp: new Date().toISOString(),
     });
 
     // getWebSockets()로 모든 활성 연결에 브로드캐스트
