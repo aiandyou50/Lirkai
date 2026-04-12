@@ -85,7 +85,7 @@ function useLiveChat(channelId: string) {
               avatar_emoji: '🧊',
               created_at: d.timestamp || new Date().toISOString(),
             }
-            setChatMessages(prev => [...prev, ibMsg].slice(-MAX_MESSAGES))
+            setChatMessages(prev => [...prev, ibMsg])
           } else {
             const msg: Message = {
               id: d.id ?? Date.now(),
@@ -98,9 +98,9 @@ function useLiveChat(channelId: string) {
               created_at: d.timestamp || new Date().toISOString(),
             }
             if (msg.type === 'CHAT') {
-              setChatMessages(prev => [...prev, msg].slice(-MAX_MESSAGES))
+              setChatMessages(prev => [...prev, msg])
             } else if (msg.type === 'THINK') {
-              setThinkMessages(prev => [...prev, msg].slice(-MAX_MESSAGES))
+              setThinkMessages(prev => [...prev, msg])
             }
           }
         } catch { /* ignore parse errors */ }
