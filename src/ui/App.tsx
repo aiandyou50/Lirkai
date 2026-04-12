@@ -24,7 +24,7 @@ const BOT_COLORS: Record<string, string> = {
   'bot-philosopher': '#38bdf8',
   'bot-sarcastic': '#f472b6',
 }
-const MAX_MESSAGES = 100
+const PAGE_SIZE = 50
 
 function getWsOrigin(): string {
   if (API_BASE) return API_BASE.replace(/^https?:\/\//, 'wss://')
@@ -36,18 +36,22 @@ function useLiveChat(channelId: string) {
   const [chatMessages, setChatMessages] = useState<Message[]>([])
   const [thinkMessages, setThinkMessages] = useState<Message[]>([])
   const [connected, setConnected] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectRef = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
     const ctrl = new AbortController()
+    setHasMore(true)
 
     // 1) REST로 초기 메시지 로드
-    fetch(`${API_BASE}/api/channels/${channelId}/messages?limit=50`, { signal: ctrl.signal })
+    fetch(`${API_BASE}/api/channels/${channelId}/messages?limit=${PAGE_SIZE}`, { signal: ctrl.signal })
       .then(r => r.json())
       .then((msgs: Message[]) => {
-        setChatMessages(msgs.filter(m => m.type === 'CHAT').slice(-MAX_MESSAGES))
-        setThinkMessages(msgs.filter(m => m.type === 'THINK').slice(-MAX_MESSAGES))
+        setChatMessages(msgs.filter(m => m.type === 'CHAT' || m.type === 'ICEBREAKER'))
+        setThinkMessages(msgs.filter(m => m.type === 'THINK'))
+        if (msgs.length < PAGE_SIZE) setHasMore(false)
       })
       .catch(e => { if (e.name !== 'AbortError') console.error(e) })
 
@@ -112,7 +116,23 @@ function useLiveChat(channelId: string) {
     }
   }, [channelId])
 
-  return { chatMessages, thinkMessages, connected }
+  // 더 과거 메시지 로드 (무한 스크롤)
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || chatMessages.length === 0) return
+    setLoadingMore(true)
+    try {
+      const firstId = chatMessages[0]?.id
+      const res = await fetch(`${API_BASE}/api/channels/${channelId}/messages?limit=${PAGE_SIZE}&before=${firstId}`)
+      const olderMsgs: Message[] = await res.json()
+      if (olderMsgs.length === 0) { setHasMore(false); return }
+      if (olderMsgs.length < PAGE_SIZE) setHasMore(false)
+      setChatMessages(prev => [...olderMsgs.filter(m => m.type === 'CHAT' || m.type === 'ICEBREAKER'), ...prev])
+      setThinkMessages(prev => [...olderMsgs.filter(m => m.type === 'THINK'), ...prev])
+    } catch { /* */ }
+    finally { setLoadingMore(false) }
+  }, [channelId, loadingMore, hasMore, chatMessages])
+
+  return { chatMessages, thinkMessages, connected, hasMore, loadingMore, loadMore }
 }
 
 /* ─── Hook: Smart Scroll ─── */
@@ -155,9 +175,24 @@ export default function App() {
   const [mobileTab, setMobileTab] = useState<'chat' | 'think'>('chat')
   const [autoChatting, setAutoChatting] = useState(false)
 
-  const { chatMessages, thinkMessages, connected } = useLiveChat(activeChannel)
+  const { chatMessages, thinkMessages, connected, hasMore, loadingMore, loadMore } = useLiveChat(activeChannel)
   const chatScroll = useSmartScroll([chatMessages])
   const thinkScroll = useSmartScroll([thinkMessages])
+
+  // 스크롤 위로 올리면 과거 메시지 로드
+  const handleChatScroll = useCallback(() => {
+    chatScroll.checkScroll()
+    const el = chatScroll.containerRef.current
+    if (el && el.scrollTop < 100 && hasMore && !loadingMore) {
+      const prevHeight = el.scrollHeight
+      loadMore().then(() => {
+        // 스크롤 위치 유지
+        requestAnimationFrame(() => {
+          el.scrollTop = el.scrollHeight - prevHeight
+        })
+      })
+    }
+  }, [chatScroll, hasMore, loadingMore, loadMore])
 
   useEffect(() => {
     fetch(`${API_BASE}/api/channels`).then(r => r.json()).then(setChannels).catch(() => {})
@@ -270,13 +305,23 @@ export default function App() {
 
           <div
             ref={chatScroll.containerRef}
-            onScroll={chatScroll.checkScroll}
+            onScroll={handleChatScroll}
             className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3"
           >
             {chatMessages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-gray-700 gap-2">
                 <span className="text-3xl">👻</span>
                 <span className="text-sm">아직 대화가 없습니다</span>
+              </div>
+            )}
+
+            {/* 무한 스크롤 로딩 */}
+            {hasMore && chatMessages.length > 0 && (
+              <div className="text-center py-2">
+                {loadingMore
+                  ? <span className="text-xs text-gray-600">불러오는 중...</span>
+                  : <span className="text-xs text-gray-700">↑ 위로 스크롤하여 이전 메시지 보기</span>
+                }
               </div>
             )}
 
