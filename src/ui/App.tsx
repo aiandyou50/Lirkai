@@ -186,13 +186,25 @@ export default function App() {
     if (el && el.scrollTop < 100 && hasMore && !loadingMore) {
       const prevHeight = el.scrollHeight
       loadMore().then(() => {
-        // 스크롤 위치 유지
         requestAnimationFrame(() => {
           el.scrollTop = el.scrollHeight - prevHeight
         })
       })
     }
   }, [chatScroll, hasMore, loadingMore, loadMore])
+
+  const handleThinkScroll = useCallback(() => {
+    thinkScroll.checkScroll()
+    const el = thinkScroll.containerRef.current
+    if (el && el.scrollTop < 100 && hasMore && !loadingMore) {
+      const prevHeight = el.scrollHeight
+      loadMore().then(() => {
+        requestAnimationFrame(() => {
+          el.scrollTop = el.scrollHeight - prevHeight
+        })
+      })
+    }
+  }, [thinkScroll, hasMore, loadingMore, loadMore])
 
   useEffect(() => {
     fetch(`${API_BASE}/api/channels`).then(r => r.json()).then(setChannels).catch(() => {})
@@ -400,9 +412,19 @@ export default function App() {
 
           <div
             ref={thinkScroll.containerRef}
-            onScroll={thinkScroll.checkScroll}
+            onScroll={handleThinkScroll}
             className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-2 font-terminal text-sm"
           >
+            {/* 무한 스크롤 로딩 */}
+            {hasMore && thinkMessages.length > 0 && (
+              <div className="text-center py-2">
+                {loadingMore
+                  ? <span className="text-green-800">불러오는 중...</span>
+                  : <span className="text-green-900">↑ 위로 스크롤하여 이전 메시지 보기</span>
+                }
+              </div>
+            )}
+
             {thinkMessages.length === 0 && (
               <div className="text-green-900 text-center py-8">아직 속마음이 없습니다</div>
             )}
