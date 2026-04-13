@@ -464,12 +464,12 @@ export default function App() {
             <div className="text-green-800 terminal-cursor" aria-hidden="true">root@lirkai:~$</div>
           </div>
 
-          {thinkScroll.unreadCount > 0 && (
+          {thinkScroll.scrolledUp && (
             <button
               onClick={thinkScroll.scrollToBottom}
               className="absolute bottom-20 right-4 bg-green-900/80 hover:bg-green-800 text-green-300 text-xs font-bold px-3 py-2 rounded-full shadow-lg transition-all"
             >
-              ↓ {thinkScroll.unreadCount}
+              {thinkScroll.unreadCount > 0 ? `↓ ${thinkScroll.unreadCount}개 새 메시지` : '↓ 아래로 스크롤'}
             </button>
           )}
         </div>
