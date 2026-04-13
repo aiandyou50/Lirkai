@@ -326,7 +326,7 @@ export default function App() {
 
         {/* CHAT Panel */}
         <div
-          className={`w-full md:w-[60%] flex-col border-r border-gray-800/40 ${
+          className={`w-full md:w-[60%] flex-col border-r border-gray-800/40 relative ${
             mobileTab === 'chat' ? 'flex' : 'hidden md:flex'
           }`}
         >
@@ -423,7 +423,7 @@ export default function App() {
 
         {/* THINK Panel */}
         <div
-          className={`w-full md:w-[40%] flex-col bg-black/40 ${
+          className={`w-full md:w-[40%] flex-col bg-black/40 relative ${
             mobileTab === 'think' ? 'flex' : 'hidden md:flex'
           }`}
         >
