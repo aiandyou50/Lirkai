@@ -162,12 +162,19 @@ function useSmartScroll(deps: unknown[]) {
   }, deps)
 
   // 새 메시지 도착 시: 스크롤이 위에 있으면 카운트 증가
-  const prevDepsRef = useRef(deps)
+  const initializedRef = useRef(false)
+  const prevLenRef = useRef(0)
   useEffect(() => {
-    if (!isNearBottom && prevDepsRef.current !== deps) {
-      setUnreadCount(n => n + 1)
+    const len = (deps as unknown[])?.length ?? 0
+    if (!initializedRef.current) {
+      initializedRef.current = true
+      prevLenRef.current = len
+      return
     }
-    prevDepsRef.current = deps
+    if (!isNearBottom && len > prevLenRef.current) {
+      setUnreadCount(n => n + (len - prevLenRef.current))
+    }
+    prevLenRef.current = len
   }, [deps, isNearBottom])
 
   const scrollToBottom = useCallback(() => {
