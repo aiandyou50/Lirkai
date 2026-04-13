@@ -141,27 +141,39 @@ function useSmartScroll(deps: unknown[]) {
   const endRef = useRef<HTMLDivElement>(null)
   const [isNearBottom, setIsNearBottom] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [scrolledUp, setScrolledUp] = useState(false)
 
   const checkScroll = useCallback(() => {
     const el = containerRef.current
     if (!el) return
     const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80
     setIsNearBottom(near)
+    setScrolledUp(!near)
     if (near) setUnreadCount(0)
   }, [])
 
   useEffect(() => {
     if (isNearBottom) {
       endRef.current?.scrollIntoView({ behavior: 'smooth' })
-    } else {
-      setUnreadCount(n => n + 1)
     }
+    // scrolledUp 상태이고 새 메시지가 왔을 때만 카운트 증가
+    // deps 변경 시 isNearBottom이 아니면 scrolledUp으로 처리
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
+
+  // 새 메시지 도착 시: 스크롤이 위에 있으면 카운트 증가
+  const prevDepsRef = useRef(deps)
+  useEffect(() => {
+    if (!isNearBottom && prevDepsRef.current !== deps) {
+      setUnreadCount(n => n + 1)
+    }
+    prevDepsRef.current = deps
+  }, [deps, isNearBottom])
 
   const scrollToBottom = useCallback(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
     setIsNearBottom(true)
+    setScrolledUp(false)
     setUnreadCount(0)
   }, [])
 
@@ -386,15 +398,18 @@ export default function App() {
             <div ref={chatScroll.endRef} />
           </div>
 
-          {/* Unread pill */}
-          {chatScroll.unreadCount > 0 && (
+          {/* Scroll indicator */}
+          {chatScroll.scrolledUp && (
             <button
               onClick={chatScroll.scrollToBottom}
               className="absolute bottom-20 left-1/2 -translate-x-1/2 md:left-[30%] md:-translate-x-1/2
                          bg-green-600 hover:bg-green-500 text-white text-xs font-bold
                          px-4 py-2 rounded-full shadow-lg shadow-green-600/25 transition-all"
             >
-              ↓ {chatScroll.unreadCount}개 새 메시지
+              {chatScroll.unreadCount > 0
+                ? `↓ ${chatScroll.unreadCount}개 새 메시지`
+                : '↓ 아래로 스크롤'
+              }
             </button>
           )}
         </div>
