@@ -152,12 +152,19 @@ function useSmartScroll(deps: unknown[]) {
     if (near) setUnreadCount(0)
   }, [])
 
+  // onScroll + passive listener 둘 다 사용 (모바일 대응)
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const handler = () => checkScroll()
+    el.addEventListener('scroll', handler, { passive: true })
+    return () => el.removeEventListener('scroll', handler)
+  }, [checkScroll])
+
   useEffect(() => {
     if (isNearBottom) {
       endRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-    // scrolledUp 상태이고 새 메시지가 왔을 때만 카운트 증가
-    // deps 변경 시 isNearBottom이 아니면 scrolledUp으로 처리
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
 
