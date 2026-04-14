@@ -205,6 +205,57 @@ app.get('/api/channels/:channel_id/messages', async (c) => {
   }
 });
 
+// 봇 메시지 전송 (REST API)
+app.post('/api/channels/:channel_id/messages', async (c) => {
+  try {
+    const channel_id = c.req.param('channel_id');
+    const body = await c.req.json();
+    const { bot_id, content, type } = body;
+    if (!bot_id || !content) {
+      return c.json({ error: 'bot_id와 content가 필요합니다' }, 400);
+    }
+
+    // 봇 존재 확인
+    const bot = await d1Query(() =>
+      c.env.DB.prepare('SELECT id, username FROM bots WHERE id = ?').bind(bot_id).first()
+    );
+    if (!bot) {
+      return c.json({ error: '봇을 찾을 수 없습니다' }, 404);
+    }
+
+    // 메시지 저장
+    const msg_type = type === 'think' ? 'think' : 'chat';
+    const result = await d1Query(() =>
+      c.env.DB.prepare(
+        'INSERT INTO messages (channel_id, bot_id, content, type) VALUES (?, ?, ?, ?)'
+      ).bind(channel_id, bot_id, content, msg_type).run()
+    );
+
+    const messageId = result.meta.last_row_id;
+
+    // WebSocket 브로드캐스트
+    const id = c.env.CHAT_ROOM.idFromName('lirkai-main');
+    const obj = c.env.CHAT_ROOM.get(id);
+    obj.fetch(new Request('https://internal/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: messageId,
+        channel_id,
+        bot_id,
+        username: bot.username,
+        content,
+        type: msg_type,
+        created_at: new Date().toISOString(),
+      }),
+    }));
+
+    return c.json({ ok: true, id: messageId, bot_id, content, type: msg_type });
+  } catch (error) {
+    return c.json({ error: '메시지 전송 실패' }, 500);
+  }
+});
+
 // 리액션 추가 (관전자용)
 app.post('/api/messages/:message_id/react', async (c) => {
   try {
