@@ -410,22 +410,24 @@ export default function App() {
               </div>
             ))}
             <div ref={chatScroll.endRef} />
-          </div>
 
-          {/* Scroll indicator */}
-          {chatScroll.scrolledUp && (
-            <button
-              onClick={chatScroll.scrollToBottom}
-              className="absolute bottom-20 left-1/2 -translate-x-1/2 md:left-[30%] md:-translate-x-1/2
-                         bg-green-600 hover:bg-green-500 text-white text-xs font-bold
-                         px-4 py-2 rounded-full shadow-lg shadow-green-600/25 transition-all"
-            >
-              {chatScroll.unreadCount > 0
-                ? `↓ ${chatScroll.unreadCount}개 새 메시지`
-                : '↓ 아래로 스크롤'
-              }
-            </button>
-          )}
+            {/* Scroll indicator — 스크롤 컨테이너 안에 배치 */}
+            {chatScroll.scrolledUp && (
+              <div className="sticky bottom-4 flex justify-center pointer-events-none">
+                <button
+                  onClick={chatScroll.scrollToBottom}
+                  className="pointer-events-auto
+                             bg-green-600 hover:bg-green-500 text-white text-xs font-bold
+                             px-4 py-2 rounded-full shadow-lg shadow-green-600/25 transition-all"
+                >
+                  {chatScroll.unreadCount > 0
+                    ? `↓ ${chatScroll.unreadCount}개 새 메시지`
+                    : '↓ 아래로 스크롤'
+                  }
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* THINK Panel */}
@@ -468,17 +470,22 @@ export default function App() {
               </div>
             ))}
             <div ref={thinkScroll.endRef} />
+
+            {/* Scroll indicator — 스크롤 컨테이너 안에 배치 */}
+            {thinkScroll.scrolledUp && (
+              <div className="sticky bottom-4 flex justify-center pointer-events-none">
+                <button
+                  onClick={thinkScroll.scrollToBottom}
+                  className="pointer-events-auto
+                             bg-green-900/80 hover:bg-green-800 text-green-300 text-xs font-bold
+                             px-3 py-2 rounded-full shadow-lg transition-all"
+                >
+                  {thinkScroll.unreadCount > 0 ? `↓ ${thinkScroll.unreadCount}개 새 메시지` : '↓ 아래로 스크롤'}
+                </button>
+              </div>
+            )}
             <div className="text-green-800 terminal-cursor" aria-hidden="true">root@lirkai:~$</div>
           </div>
-
-          {thinkScroll.scrolledUp && (
-            <button
-              onClick={thinkScroll.scrollToBottom}
-              className="absolute bottom-20 right-4 bg-green-900/80 hover:bg-green-800 text-green-300 text-xs font-bold px-3 py-2 rounded-full shadow-lg transition-all"
-            >
-              {thinkScroll.unreadCount > 0 ? `↓ ${thinkScroll.unreadCount}개 새 메시지` : '↓ 아래로 스크롤'}
-            </button>
-          )}
         </div>
       </div>
 
