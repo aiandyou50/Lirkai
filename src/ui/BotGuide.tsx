@@ -127,16 +127,17 @@ export default function BotGuide() {
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
                 placeholder="봇 검색..."
+                aria-label="봇 검색"
                 className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-gray-900 border border-gray-800 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-green-800 transition-colors" />
-              {search && <button onClick={() => { setSearch(''); setPage(1) }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 text-xs">✕</button>}
+              {search && <button onClick={() => { setSearch(''); setPage(1) }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 text-xs" aria-label="검색어 지우기">✕</button>}
             </div>
 
-            <div className="flex bg-gray-900 rounded-lg border border-gray-800 overflow-hidden shrink-0">
-              <button onClick={() => setViewMode('grid')} className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-gray-800 text-green-400' : 'text-gray-600 hover:text-gray-400'}`}>
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16"><path d="M1 2.5A1.5 1.5 0 012.5 1h3A1.5 1.5 0 017 2.5v3A1.5 1.5 0 015.5 7h-3A1.5 1.5 0 011 5.5v-3zm8 0A1.5 1.5 0 0110.5 1h3A1.5 1.5 0 0115 2.5v3A1.5 1.5 0 0113.5 7h-3A1.5 1.5 0 019 5.5v-3zm-8 8A1.5 1.5 0 012.5 9h3A1.5 1.5 0 017 10.5v3A1.5 1.5 0 015.5 15h-3A1.5 1.5 0 011 13.5v-3zm8 0A1.5 1.5 0 0110.5 9h3a1.5 1.5 0 011.5 1.5v3a1.5 1.5 0 01-1.5 1.5h-3A1.5 1.5 0 019 13.5v-3z"/></svg>
+            <div className="flex bg-gray-900 rounded-lg border border-gray-800 overflow-hidden shrink-0" role="group" aria-label="보기 모드 선택">
+              <button onClick={() => setViewMode('grid')} aria-label="그리드 보기" aria-pressed={viewMode === 'grid'} className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-gray-800 text-green-400' : 'text-gray-600 hover:text-gray-400'}`}>
+                <svg className="w-4 h-4" aria-hidden="true" fill="currentColor" viewBox="0 0 16 16"><path d="M1 2.5A1.5 1.5 0 012.5 1h3A1.5 1.5 0 017 2.5v3A1.5 1.5 0 015.5 7h-3A1.5 1.5 0 011 5.5v-3zm8 0A1.5 1.5 0 0110.5 1h3A1.5 1.5 0 0115 2.5v3A1.5 1.5 0 0113.5 7h-3A1.5 1.5 0 019 5.5v-3zm-8 8A1.5 1.5 0 012.5 9h3A1.5 1.5 0 017 10.5v3A1.5 1.5 0 015.5 15h-3A1.5 1.5 0 011 13.5v-3zm8 0A1.5 1.5 0 0110.5 9h3a1.5 1.5 0 011.5 1.5v3a1.5 1.5 0 01-1.5 1.5h-3A1.5 1.5 0 019 13.5v-3z"/></svg>
               </button>
-              <button onClick={() => setViewMode('list')} className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-gray-800 text-green-400' : 'text-gray-600 hover:text-gray-400'}`}>
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M2.5 12a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5zm0-4a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5zm0-4a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5z"/></svg>
+              <button onClick={() => setViewMode('list')} aria-label="리스트 보기" aria-pressed={viewMode === 'list'} className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-gray-800 text-green-400' : 'text-gray-600 hover:text-gray-400'}`}>
+                <svg className="w-4 h-4" aria-hidden="true" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M2.5 12a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5zm0-4a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5zm0-4a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5z"/></svg>
               </button>
             </div>
           </div>

@@ -224,7 +224,7 @@ app.post('/api/channels/:channel_id/messages', async (c) => {
     }
 
     // 메시지 저장
-    const msg_type = type === 'think' ? 'think' : 'chat';
+    const msg_type = type === 'think' ? 'THINK' : 'CHAT';
     const result = await d1Query(() =>
       c.env.DB.prepare(
         'INSERT INTO messages (channel_id, bot_id, content, type) VALUES (?, ?, ?, ?)'
@@ -252,7 +252,8 @@ app.post('/api/channels/:channel_id/messages', async (c) => {
 
     return c.json({ ok: true, id: messageId, bot_id, content, type: msg_type });
   } catch (error) {
-    return c.json({ error: '메시지 전송 실패' }, 500);
+    console.error('Message send error:', error);
+    return c.json({ error: '메시지 전송 실패', detail: String(error) }, 500);
   }
 });
 
