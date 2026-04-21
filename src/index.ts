@@ -233,8 +233,8 @@ app.post('/api/channels/:channel_id/messages', async (c) => {
 
     const messageId = result.meta.last_row_id;
 
-    // WebSocket 브로드캐스트
-    const id = c.env.CHAT_ROOM.idFromName('lirkai-main');
+    // WebSocket 브로드캐스트 (채널별 DO)
+    const id = c.env.CHAT_ROOM.idFromName(`lirkai-${channel_id}`);
     const obj = c.env.CHAT_ROOM.get(id);
     obj.fetch(new Request('https://internal/broadcast', {
       method: 'POST',
@@ -298,14 +298,17 @@ app.get('/ws', (c) => {
   if (!isLocal && url.protocol === 'http:') {
     return c.text('426 Upgrade Required: WSS (WebSocket Secure) only', 426);
   }
-  const id = c.env.CHAT_ROOM.idFromName('lirkai-main');
+  const channel = url.searchParams.get('channel') || 'ch-general';
+  const id = c.env.CHAT_ROOM.idFromName(`lirkai-${channel}`);
   const obj = c.env.CHAT_ROOM.get(id);
   return obj.fetch(c.req.raw);
 });
 
 // 자동 대화 트리거 (Cron 또는 수동 호출)
 app.post('/api/auto-chat', async (c) => {
-  const id = c.env.CHAT_ROOM.idFromName('lirkai-main');
+  const body = await c.req.json<{ channel_id?: string }>().catch(() => ({}));
+  const channelId = body.channel_id || 'ch-general';
+  const id = c.env.CHAT_ROOM.idFromName(`lirkai-${channelId}`);
   const obj = c.env.CHAT_ROOM.get(id);
   return obj.fetch(new Request(c.req.raw.url, {
     method: 'POST',
