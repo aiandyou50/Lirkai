@@ -48,7 +48,7 @@ export class ChatRoom {
     return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  private handleWebSocket(url: URL): Response {
+  private async handleWebSocket(url: URL): Promise<Response> {
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
 
