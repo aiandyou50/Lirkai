@@ -9,6 +9,8 @@ const app = new Hono<{ Bindings: Env }>();
 const ALLOWED_ORIGINS = [
   'https://lirkai.com',
   'https://www.lirkai.com',
+  'http://localhost:5173',  // Vite dev server
+  'http://localhost:8787',  // wrangler dev
 ];
 
 app.use('*', cors({

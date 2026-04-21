@@ -41,6 +41,13 @@ export class ChatRoom {
     }
   }
 
+  private async hashSecret(text: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
   private handleWebSocket(url: URL): Response {
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
@@ -48,6 +55,22 @@ export class ChatRoom {
     const channel_id = url.searchParams.get('channel') || 'ch-general';
     const bot_id = url.searchParams.get('bot_id') || '';
     const type = url.searchParams.get('type') || 'bot';
+    const secret = url.searchParams.get('secret');
+    const lastMsgId = parseInt(url.searchParams.get('last_msg_id') || '0');
+
+    // bot secret 인증 검증
+    if (type === 'bot' && bot_id && secret) {
+      this.hashSecret(secret).then(async (hash) => {
+        try {
+          const bot = await this.env.DB.prepare('SELECT api_key_hash FROM bots WHERE id = ?')
+            .bind(bot_id).first<{ api_key_hash: string }>();
+          if (bot && bot.api_key_hash && bot.api_key_hash !== 'hash' && bot.api_key_hash !== hash) {
+            server.send(JSON.stringify({ type: 'ERROR', content: '인증 실패: secret이 일치하지 않습니다' }));
+            server.close(4003, 'Authentication failed');
+          }
+        } catch { /* DB 오류 시 연결 허용 */ }
+      });
+    }
 
     // 중복 연결 방지: 같은 bot_id + channel_id 기존 연결 정리
     if (type === 'bot' && bot_id) {
@@ -62,6 +85,22 @@ export class ChatRoom {
     server.serializeAttachment({ channel_id, bot_id, type } as WSAttachment);
 
     this.state.acceptWebSocket(server);
+
+    // 재연결 시 놓친 메시지 재전송
+    if (lastMsgId > 0 && type === 'bot') {
+      try {
+        const missed = await this.env.DB.prepare(
+          `SELECT m.*, b.username, b.avatar_emoji FROM messages m JOIN bots b ON m.bot_id = b.id WHERE m.channel_id = ? AND m.id > ? ORDER BY m.id ASC LIMIT 50`
+        ).bind(channel_id, lastMsgId).all();
+        for (const msg of missed.results) {
+          server.send(JSON.stringify({
+            id: msg.id, type: msg.type, channel_id, bot_id: msg.bot_id,
+            username: msg.username, avatar: msg.avatar_emoji,
+            content: msg.content, timestamp: msg.created_at,
+          }));
+        }
+      } catch { /* */ }
+    }
 
     // JOIN 알림 (기존 연결된 봇들에게)
     if (type === 'bot' && bot_id) {
@@ -164,9 +203,17 @@ export class ChatRoom {
       content: messageContent, timestamp: new Date().toISOString(),
     });
 
-    // getWebSockets()로 모든 활성 연결에 브로드캐스트
+    // 발신자에게 ACK
+    try {
+      ws.send(JSON.stringify({
+        type: 'ACK', id: dbId, channel_id, content: messageContent,
+        timestamp: new Date().toISOString(),
+      }));
+    } catch { /* */ }
+
+    // 다른 연결에 브로드캐스트
     for (const activeWs of this.state.getWebSockets()) {
-      if (activeWs === ws) continue; // 자기 자신 제외
+      if (activeWs === ws) continue;
       const att = this.getAttachment(activeWs);
       if (!att) continue;
       // 같은 채널의 봇 + 모든 관전자에게 전송
