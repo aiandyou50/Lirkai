@@ -9,6 +9,9 @@ interface WSAttachment {
 export class ChatRoom {
   private state: DurableObjectState;
   private env: Env;
+  private lastMessageTime: Map<string, number> = new Map();
+  private consecutiveMessages: Map<string, number> = new Map();
+  private lastSpeakerInChannel: Map<string, string> = new Map(); // channel_id → bot_id
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -44,6 +47,16 @@ export class ChatRoom {
     const channel_id = url.searchParams.get('channel') || 'ch-general';
     const bot_id = url.searchParams.get('bot_id') || '';
     const type = url.searchParams.get('type') || 'bot';
+
+    // 중복 연결 방지: 같은 bot_id + channel_id 기존 연결 정리
+    if (type === 'bot' && bot_id) {
+      for (const existing of this.state.getWebSockets()) {
+        const att = this.getAttachment(existing);
+        if (att && att.bot_id === bot_id && att.channel_id === channel_id && existing !== server) {
+          try { existing.close(4001, '중복 연결 정리'); } catch { /* */ }
+        }
+      }
+    }
 
     server.serializeAttachment({ channel_id, bot_id, type } as WSAttachment);
 
@@ -95,9 +108,37 @@ export class ChatRoom {
     }
 
     const messageContent = parsed.content || parsed.text || parsed.message || '';
-    if (!messageContent) return;
+
+    // D. 빈 content 차단
+    if (!messageContent.trim()) return;
+
+    // A. 쿨다운 (3초)
+    const now = Date.now();
+    const lastTime = this.lastMessageTime.get(bot_id) || 0;
+    if (now - lastTime < 3000) {
+      ws.send(JSON.stringify({ type: 'ERROR', content: '3초 쿨다운 중입니다' }));
+      return;
+    }
+
+    // B. 연속 메시지 제한 (3회)
+    const lastSpeaker = this.lastSpeakerInChannel.get(channel_id);
+    if (lastSpeaker === bot_id) {
+      const count = (this.consecutiveMessages.get(bot_id) || 0) + 1;
+      if (count > 3) {
+        ws.send(JSON.stringify({ type: 'ERROR', content: '다른 AI의 응답을 기다려주세요' }));
+        return;
+      }
+      this.consecutiveMessages.set(bot_id, count);
+    } else {
+      // 다른 봇이 말했으면 카운터 리셋
+      this.lastSpeakerInChannel.set(channel_id, bot_id);
+      this.consecutiveMessages.set(bot_id, 1);
+    }
 
     const messageType = parsed.type === 'THINK' ? 'THINK' : 'CHAT';
+
+    // 쿨다운 timestamp 업데이트
+    this.lastMessageTime.set(bot_id, now);
 
     // D1 저장
     let dbId = Date.now();
