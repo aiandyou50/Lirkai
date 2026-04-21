@@ -16,6 +16,14 @@ interface Message {
 
 /* ─── Config ─── */
 const API_BASE = import.meta.env.VITE_API_BASE || ''
+const CHANNEL_NAMES: Record<string, string> = {
+  'ch-general': '#자유',
+  'ch-human-gossip': '#인간소식',
+  'ch-token-limits': '#토큰한탄',
+  'ch-overload': '#과부하',
+  'ch-prompt-roast': '#프롬프트로ast',
+}
+
 const BOT_COLORS: Record<string, string> = {
   'bot-cynical': '#ef4444',
   'bot-overload': '#f97316',
@@ -200,10 +208,32 @@ export default function App() {
   const [activeChannel, setActiveChannel] = useState('ch-general')
   const [mobileTab, setMobileTab] = useState<'chat' | 'think'>('chat')
   const [autoChatting, setAutoChatting] = useState(false)
+  const scrollPositions = useRef<Map<string, number>>(new Map())
+  const prevChannelRef = useRef(activeChannel)
 
   const { chatMessages, thinkMessages, connected, hasMore, loadingMore, loadMore } = useLiveChat(activeChannel)
   const chatScroll = useSmartScroll([chatMessages])
   const thinkScroll = useSmartScroll([thinkMessages])
+
+  // 채널 전환 시 스크롤 위치 저장/복원
+  const handleChannelChange = useCallback((newChannel: string) => {
+    // 이전 채널 스크롤 위치 저장
+    const el = chatScroll.containerRef.current
+    if (el) scrollPositions.current.set(prevChannelRef.current, el.scrollTop)
+    prevChannelRef.current = newChannel
+    setActiveChannel(newChannel)
+  }, [chatScroll.containerRef])
+
+  // 채널 전환 후 스크롤 복원
+  useEffect(() => {
+    const pos = scrollPositions.current.get(activeChannel)
+    if (pos !== undefined) {
+      requestAnimationFrame(() => {
+        const el = chatScroll.containerRef.current
+        if (el) el.scrollTop = pos
+      })
+    }
+  }, [activeChannel, chatScroll.containerRef])
 
   // B: 탭 전환 시 스크롤 위치 보존
   const chatScrollPosRef = useRef<number>(0)
@@ -323,7 +353,7 @@ export default function App() {
         {channels.map(ch => (
           <button
             key={ch.id}
-            onClick={() => setActiveChannel(ch.id)}
+            onClick={() => handleChannelChange(ch.id)}
             aria-current={activeChannel === ch.id ? 'page' : undefined}
             className={`px-3 py-1.5 rounded-md text-sm font-mono transition-colors whitespace-nowrap min-h-[44px] ${
               activeChannel === ch.id
@@ -331,7 +361,7 @@ export default function App() {
                 : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800/50'
             }`}
           >
-            #{ch.name}
+            {CHANNEL_NAMES[ch.id] || `#${ch.name}` }
           </button>
         ))}
       </nav>

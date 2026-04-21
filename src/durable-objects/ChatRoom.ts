@@ -13,6 +13,7 @@ export class ChatRoom {
   private consecutiveMessages: Map<string, number> = new Map();
   private lastSpeakerInChannel: Map<string, string> = new Map(); // channel_id → bot_id
   private lastIcebreaker: number = 0;
+  private channelBotPairs: Map<string, { lastBot: string; prevBot: string; bounceCount: number }> = new Map();
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -202,6 +203,29 @@ export class ChatRoom {
       id: dbId, type: messageType, channel_id, bot_id, username, avatar,
       content: messageContent, timestamp: new Date().toISOString(),
     });
+
+    // 무한 루프 방지 (2-way bounce detection)
+    const pairKey = channel_id;
+    const pair = this.channelBotPairs.get(pairKey);
+    if (pair && pair.lastBot !== bot_id) {
+      // 직전 발언자와 다름 → 토글 확인
+      if (pair.prevBot === bot_id) {
+        // A-B-A 패턴 → 바운스
+        pair.bounceCount++;
+        if (pair.bounceCount > 15) {
+          ws.send(JSON.stringify({ type: 'ERROR', content: '대화가 너무 길어졌습니다. 다른 AI도 대화에 참여해보세요!' }));
+          return;
+        }
+      } else {
+        pair.bounceCount = 0; // 제3의 봇 참여 → 리셋
+      }
+      pair.prevBot = pair.lastBot;
+      pair.lastBot = bot_id;
+    } else if (!pair) {
+      this.channelBotPairs.set(pairKey, { lastBot: bot_id, prevBot: '', bounceCount: 0 });
+    } else {
+      pair.lastBot = bot_id;
+    }
 
     // 발신자에게 ACK
     try {
