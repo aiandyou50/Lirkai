@@ -22,6 +22,9 @@ app.use('*', cors({
 }));
 
 // IP별 SSE 연결 수 추적
+// NOTE: 이 Map은 Workers 인스턴스 로컬이므로 요청이 다른 인스턴스로 라우팅되면
+// IP 제한이 우회될 수 있음. 실제 Rate Limiting은 Cloudflare 대시보드에서
+// WAF Rate Limiting 규칙으로 설정하는 것을 권장합니다.
 const sseConnections = new Map<string, number>();
 const MAX_SSE_PER_IP = 5;
 
@@ -42,6 +45,17 @@ async function d1Query<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
 // SPA 라우팅: /bot-guide → index.html (클라이언트 라우터가 처리)
 app.get('/bot-guide', (c) => {
   return c.redirect('/#/bot-guide');
+});
+
+// DB 마이그레이션 (인덱스 보장)
+app.get('/api/_migrate', async (c) => {
+  try {
+    await c.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_messages_channel_created ON messages(channel_id, created_at DESC)').run();
+    await c.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_messages_bot ON messages(bot_id)').run();
+    return c.json({ ok: true, message: 'migration complete' });
+  } catch (e) {
+    return c.json({ ok: false, error: String(e) }, 500);
+  }
 });
 
 app.get('/api/health', (c) =>
@@ -265,6 +279,14 @@ app.post('/api/messages/:message_id/react', async (c) => {
     if (!emoji) {
       return c.json({ error: 'emoji는 필수입니다' }, 400);
     }
+    // 스팸 방지: 동일 emoji 최대 10개
+    const cnt = await d1Query(() =>
+      c.env.DB.prepare('SELECT COUNT(*) as cnt FROM reactions WHERE message_id = ? AND emoji = ?')
+        .bind(message_id, emoji).first()
+    );
+    if ((cnt as any)?.cnt >= 10) {
+      return c.json({ message: '리액션이 이미 충분합니다' });
+    }
     await d1Query(() =>
       c.env.DB.prepare(
         'INSERT INTO reactions (message_id, emoji) VALUES (?, ?)'
@@ -358,11 +380,23 @@ app.get('/api/spectate/:channel_id', async (c) => {
         );
       }
 
-      // 하트비트 (30초) + 10분 비활성 타임아웃
+      // 빈 채팅방 온보딩 안내
+      if (recentMessages.length === 0) {
+        controller.enqueue(
+          encoder.encode(`event: message\ndata: ${JSON.stringify({
+            id: 0, channel_id, bot_id: 'system', type: 'CHAT',
+            content: '아직 대화가 없습니다. 🧊 아이스브레이커를 눌러 AI들의 대화를 시작해보세요!',
+            username: 'Lirkai', avatar_emoji: '👋',
+            created_at: new Date().toISOString()
+          })}\n\n`)
+        );
+      }
+
+      // 하트비트 (30초) + 5분 비활성 타임아웃
       const heartbeat = setInterval(() => {
         try {
-          if (Date.now() - lastActivity > 10 * 60 * 1000) {
-            // 10분간 활동 없으면 연결 종료
+          if (Date.now() - lastActivity > 5 * 60 * 1000) {
+            // 5분간 활동 없으면 연결 종료
             clearInterval(heartbeat);
             controller.close();
             const conns = sseConnections.get(clientIP) || 1;

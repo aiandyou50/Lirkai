@@ -205,6 +205,11 @@ export default function App() {
   const chatScroll = useSmartScroll([chatMessages])
   const thinkScroll = useSmartScroll([thinkMessages])
 
+  // B: 탭 전환 시 스크롤 위치 보존
+  const chatScrollPosRef = useRef<number>(0)
+  const thinkScrollPosRef = useRef<number>(0)
+  const prevMobileTabRef = useRef(mobileTab)
+
   // 스크롤 위로 올리면 과거 메시지 로드
   const handleChatScroll = useCallback(() => {
     chatScroll.checkScroll()
@@ -262,6 +267,22 @@ export default function App() {
       alert('네트워크 오류')
     }
   }
+
+  // B: 탭 전환 후 스크롤 위치 복원
+  useEffect(() => {
+    if (prevMobileTabRef.current !== mobileTab) {
+      requestAnimationFrame(() => {
+        if (mobileTab === 'chat') {
+          const el = chatScroll.containerRef.current
+          if (el) el.scrollTop = chatScrollPosRef.current
+        } else {
+          const el = thinkScroll.containerRef.current
+          if (el) el.scrollTop = thinkScrollPosRef.current
+        }
+      })
+      prevMobileTabRef.current = mobileTab
+    }
+  }, [mobileTab, chatScroll.containerRef, thinkScroll.containerRef])
 
   const activeName = channels.find(c => c.id === activeChannel)?.name ?? activeChannel
 
@@ -322,7 +343,15 @@ export default function App() {
             key={tab}
             role="tab"
             aria-selected={mobileTab === tab}
-            onClick={() => setMobileTab(tab)}
+            onClick={() => {
+              // B: 현재 탭 스크롤 위치 저장 후 전환
+              if (prevMobileTabRef.current === 'chat') {
+                chatScrollPosRef.current = chatScroll.containerRef.current?.scrollTop ?? 0
+              } else {
+                thinkScrollPosRef.current = thinkScroll.containerRef.current?.scrollTop ?? 0
+              }
+              setMobileTab(tab)
+            }}
             className={`flex-1 py-2.5 text-sm font-terminal text-center transition-colors min-h-[44px] ${
               mobileTab === tab ? 'text-green-400 bg-gray-900/60' : 'text-gray-600'
             }`}
@@ -403,7 +432,7 @@ export default function App() {
                           key={emoji}
                           onClick={(e) => { e.stopPropagation(); handleReact(msg.id, emoji) }}
                           aria-label={`${emoji} 리액션`}
-                          className="text-sm px-2 py-1.5 rounded-lg bg-gray-800/60 hover:bg-gray-700 active:bg-green-900/40 transition-colors min-h-[34px] min-w-[34px]"
+                          className="text-sm px-2 py-1.5 rounded-lg bg-gray-800/60 hover:bg-gray-700 active:bg-green-900/40 transition-all min-h-[34px] min-w-[34px] active:scale-125 duration-150"
                         >
                           {emoji}
                         </button>
@@ -494,7 +523,7 @@ export default function App() {
       </div>
 
       {/* ── Footer ── */}
-      <footer className="shrink-0 border-t border-gray-800/60 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-600">
+      <footer className="shrink-0 border-t border-gray-800/60 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-600" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}>
         <span className="hidden sm:flex items-center gap-1.5">
           👀 관전 모드 — 입력 불가
         </span>
