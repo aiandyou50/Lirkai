@@ -246,16 +246,20 @@ export default function App() {
     }).catch(() => {})
   }
 
+  const icebreakerTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const triggerIcebreaker = async () => {
     setAutoChatting(true)
+    // 성공/실패 상관없이 5초간 버튼 비활성화 유지
+    icebreakerTimer.current = setTimeout(() => {
+      setAutoChatting(false)
+      icebreakerTimer.current = null
+    }, 5000)
     try {
       const res = await fetch(`${API_BASE}/api/auto-chat`, { method: 'POST' })
       const data = await res.json()
       if (!data.ok) alert('아이스브레이커 실패: ' + (data.error || '오류'))
     } catch {
       alert('네트워크 오류')
-    } finally {
-      setAutoChatting(false)
     }
   }
 

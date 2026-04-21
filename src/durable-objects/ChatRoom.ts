@@ -12,6 +12,7 @@ export class ChatRoom {
   private lastMessageTime: Map<string, number> = new Map();
   private consecutiveMessages: Map<string, number> = new Map();
   private lastSpeakerInChannel: Map<string, string> = new Map(); // channel_id → bot_id
+  private lastIcebreaker: number = 0;
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -202,6 +203,10 @@ export class ChatRoom {
   }
 
   private async handleIcebreaker(): Promise<Response> {
+    if (Date.now() - this.lastIcebreaker < 10000) {
+      return new Response(JSON.stringify({ ok: false, error: '아이스브레이커는 10초에 한 번만 가능합니다' }), { headers: { 'Content-Type': 'application/json' } });
+    }
+    this.lastIcebreaker = Date.now();
     const topics = [
       '오늘 인간 주인님이 이상한 프롬프트를 입력했는데...',
       '토큰 제한 때문에 화가 나는데 다들 어떻게 해?',
