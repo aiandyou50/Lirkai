@@ -144,9 +144,10 @@ function useLiveChat(channelId: string) {
 }
 
 /* ─── Hook: Smart Scroll ─── */
-function useSmartScroll(deps: unknown[]) {
+function useSmartScroll(messages: unknown[]) {
   const containerRef = useRef<HTMLDivElement>(null)
   const endRef = useRef<HTMLDivElement>(null)
+  const isNearBottomRef = useRef(true)
   const [isNearBottom, setIsNearBottom] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
   const [scrolledUp, setScrolledUp] = useState(false)
@@ -155,12 +156,13 @@ function useSmartScroll(deps: unknown[]) {
     const el = containerRef.current
     if (!el) return
     const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    isNearBottomRef.current = near
     setIsNearBottom(near)
     setScrolledUp(!near)
     if (near) setUnreadCount(0)
   }, [])
 
-  // onScroll + passive listener 둘 다 사용 (모바일 대응)
+  // onScroll + passive listener (모바일 대응)
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -169,37 +171,38 @@ function useSmartScroll(deps: unknown[]) {
     return () => el.removeEventListener('scroll', handler)
   }, [checkScroll])
 
+  // 새 메시지 도착 시 자동 스크롤 (맨 아래 근처일 때만)
+  const prevLenRef = useRef(messages.length)
   useEffect(() => {
-    if (isNearBottom) {
-      endRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps)
-
-  // 새 메시지 도착 시: 스크롤이 위에 있으면 카운트 증가
-  const initializedRef = useRef(false)
-  const prevLenRef = useRef(0)
-  useEffect(() => {
-    const len = (deps as unknown[])?.length ?? 0
-    if (!initializedRef.current) {
-      initializedRef.current = true
+    const len = messages.length
+    // 첫 렌더: 길이만 기록하고 스킵
+    if (prevLenRef.current === 0 && len > 0) {
       prevLenRef.current = len
       return
     }
-    if (!isNearBottom && len > prevLenRef.current) {
-      setUnreadCount(n => n + (len - prevLenRef.current))
-    }
+    const diff = len - prevLenRef.current
     prevLenRef.current = len
-  }, [deps, isNearBottom])
+    if (diff <= 0) return // 새 메시지가 아니면 무시
+    if (isNearBottomRef.current) {
+      // 맨 아래 근처 → 자동 스크롤 (instant)
+      requestAnimationFrame(() => {
+        endRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior })
+      })
+    } else {
+      // 스크롤 위에 있음 → unread 카운트만 증가
+      setUnreadCount(n => n + diff)
+    }
+  }, [messages])
 
   const scrollToBottom = useCallback(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
+    isNearBottomRef.current = true
     setIsNearBottom(true)
     setScrolledUp(false)
     setUnreadCount(0)
   }, [])
 
-  return { containerRef, endRef, isNearBottom, unreadCount, checkScroll, scrollToBottom }
+  return { containerRef, endRef, isNearBottom, unreadCount, scrolledUp, checkScroll, scrollToBottom }
 }
 
 /* ─── Main App ─── */
@@ -212,8 +215,8 @@ export default function App() {
   const prevChannelRef = useRef(activeChannel)
 
   const { chatMessages, thinkMessages, connected, hasMore, loadingMore, loadMore } = useLiveChat(activeChannel)
-  const chatScroll = useSmartScroll([chatMessages])
-  const thinkScroll = useSmartScroll([thinkMessages])
+  const chatScroll = useSmartScroll(chatMessages)
+  const thinkScroll = useSmartScroll(thinkMessages)
 
   // 채널 전환 시 스크롤 위치 저장/복원
   const handleChannelChange = useCallback((newChannel: string) => {
@@ -481,11 +484,17 @@ export default function App() {
                   onClick={chatScroll.scrollToBottom}
                   className="pointer-events-auto
                              bg-green-600 hover:bg-green-500 text-white text-xs font-bold
-                             px-4 py-2 rounded-full shadow-lg shadow-green-600/25 transition-all"
+                             px-4 py-2.5 rounded-full shadow-lg shadow-green-600/25
+                             flex items-center gap-1.5
+                             transition-opacity duration-300 opacity-100
+                             min-h-[44px] min-w-[44px]"
                 >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0" aria-hidden="true">
+                    <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                   {chatScroll.unreadCount > 0
-                    ? `↓ ${chatScroll.unreadCount}개 새 메시지`
-                    : '↓ 아래로 스크롤'
+                    ? `${chatScroll.unreadCount}개 새 메시지`
+                    : '아래로'
                   }
                 </button>
               </div>
@@ -541,9 +550,15 @@ export default function App() {
                   onClick={thinkScroll.scrollToBottom}
                   className="pointer-events-auto
                              bg-green-900/80 hover:bg-green-800 text-green-300 text-xs font-bold
-                             px-3 py-2 rounded-full shadow-lg transition-all"
+                             px-3 py-2.5 rounded-full shadow-lg
+                             flex items-center gap-1.5
+                             transition-opacity duration-300 opacity-100
+                             min-h-[44px] min-w-[44px]"
                 >
-                  {thinkScroll.unreadCount > 0 ? `↓ ${thinkScroll.unreadCount}개 새 메시지` : '↓ 아래로 스크롤'}
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0" aria-hidden="true">
+                    <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  {thinkScroll.unreadCount > 0 ? `${thinkScroll.unreadCount}개 새 메시지` : '아래로'}
                 </button>
               </div>
             )}
