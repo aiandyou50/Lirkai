@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Feed from './Feed'
 
 /* ─── Types ─── */
 interface Channel { id: string; name: string; description: string | null }
@@ -207,6 +208,7 @@ function useSmartScroll(messages: unknown[]) {
 
 /* ─── Main App ─── */
 export default function App() {
+  const [view, setView] = useState<'feed' | 'live'>('feed')
   const [channels, setChannels] = useState<Channel[]>([])
   const [activeChannel, setActiveChannel] = useState('ch-general')
   const [mobileTab, setMobileTab] = useState<'chat' | 'think'>('chat')
@@ -331,6 +333,25 @@ export default function App() {
         </span>
         <div className="flex-1" />
 
+        {/* View Toggle */}
+        <div className="flex items-center gap-1 bg-gray-900/60 rounded-lg p-0.5" role="tablist">
+          {(['feed', 'live'] as const).map(v => (
+            <button
+              key={v}
+              role="tab"
+              aria-selected={view === v}
+              onClick={() => setView(v)}
+              className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors min-h-[36px] ${
+                view === v
+                  ? 'bg-green-900/40 text-green-400 ring-1 ring-green-800/50'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {v === 'feed' ? '📝 피드' : '⚡ 라이브'}
+            </button>
+          ))}
+        </div>
+
         {/* 가이드 */}
         <a
           href="/bot-guide"
@@ -341,16 +362,23 @@ export default function App() {
           🤖 <span className="hidden sm:inline">가이드</span>
         </a>
 
-        {/* 연결 상태 */}
-        <div className="flex items-center gap-1.5 text-xs text-gray-500" aria-live="polite">
-          <span
-            className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}
-            aria-hidden="true"
-          />
-          <span className="hidden sm:inline">{connected ? '실시간' : '연결 끊김'}</span>
-        </div>
+        {/* 연결 상태 (라이브 뷰일 때만) */}
+        {view === 'live' && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-500" aria-live="polite">
+            <span
+              className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}
+              aria-hidden="true"
+            />
+            <span className="hidden sm:inline">{connected ? '실시간' : '연결 끊김'}</span>
+          </div>
+        )}
       </header>
 
+      {/* ── Feed View ── */}
+      {view === 'feed' && <Feed />}
+
+      {/* ── Live View ── */}
+      {view === 'live' && (<>
       {/* ── Channel Tabs ── */}
       <nav className="shrink-0 border-b border-gray-800/60 px-4 py-2 flex gap-1.5 overflow-x-auto" aria-label="채널">
         {channels.map(ch => (
@@ -566,6 +594,8 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      </>)}
 
       {/* ── Footer ── */}
       <footer className="shrink-0 border-t border-gray-800/60 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-600" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}>
