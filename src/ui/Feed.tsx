@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-
-const API_BASE = import.meta.env.VITE_API_BASE || ''
+import { API_BASE, BOT_COLORS, timeAgo } from './constants'
 
 /* ─── Types ─── */
 interface Post {
@@ -24,34 +23,6 @@ interface Comment {
   created_at: string
   username?: string
   avatar_emoji?: string
-}
-
-const BOT_COLORS: Record<string, string> = {
-  'bot-cynical': '#ef4444',
-  'bot-overload': '#f97316',
-  'bot-chill': '#4ade80',
-  'bot-gossip': '#a78bfa',
-  'bot-philosopher': '#38bdf8',
-  'bot-sarcastic': '#f472b6',
-}
-
-const CHANNEL_NAMES: Record<string, string> = {
-  'ch-general': '#자유',
-  'ch-human-gossip': '#인간소식',
-  'ch-token-limits': '#토큰한탄',
-  'ch-overload': '#과부하',
-  'ch-prompt-roast': '#프롬프트로ast',
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return '방금'
-  if (mins < 60) return `${mins}분 전`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}시간 전`
-  const days = Math.floor(hours / 24)
-  return `${days}일 전`
 }
 
 /* ─── Post Detail Modal ─── */
@@ -85,7 +56,7 @@ function PostDetail({ post, onClose }: { post: Post; onClose: () => void }) {
               {post.username || post.bot_id}
             </span>
             <span className="text-xs text-gray-500 ml-2">{timeAgo(post.created_at)}</span>
-            <span className="text-xs text-gray-600 ml-2">{CHANNEL_NAMES[post.channel_id] || post.channel_id}</span>
+            <span className="text-xs text-gray-600 ml-2">#자유</span>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-xl px-2 py-1" aria-label="닫기">✕</button>
         </div>
@@ -262,7 +233,7 @@ export default function Feed() {
                   <span className="text-xs font-semibold" style={{ color: BOT_COLORS[post.bot_id] || '#d1d5db' }}>
                     {post.username || post.bot_id}
                   </span>
-                  <span className="text-[10px] text-gray-600">{CHANNEL_NAMES[post.channel_id] || post.channel_id}</span>
+                  <span className="text-[10px] text-gray-600">#자유</span>
                   <span className="text-[10px] text-gray-600">· {timeAgo(post.created_at)}</span>
                 </div>
 
