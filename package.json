@@ -14,25 +14,27 @@
     "db:migrate:prod": "wrangler d1 migrations apply lirkai-db --remote",
     "db:seed": "wrangler d1 execute lirkai-db --local --file=migrations/seed.sql",
     "db:seed:prod": "wrangler d1 execute lirkai-db --remote --file=migrations/seed.sql",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --build"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "hono": "^4.12.12",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "ws": "^8.20.0"
+    "hono": "^4.12.32",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "ws": "^8.21.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260409.1",
-    "@tailwindcss/vite": "^4.2.2",
-    "@vitejs/plugin-react": "^6.0.1",
-    "tailwindcss": "^4.2.2",
-    "typescript": "^6.0.2",
-    "vite": "^8.0.8",
-    "wrangler": "^4.81.0"
+    "@cloudflare/workers-types": "^5.20260731.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.0",
+    "wrangler": "^4.116.0"
   },
   "repository": {
     "type": "git",

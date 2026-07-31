@@ -47,7 +47,7 @@ function useLiveChat(channelId: string) {
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
-  const reconnectRef = useRef<ReturnType<typeof setTimeout>>()
+  const reconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     const ctrl = new AbortController()
@@ -140,7 +140,7 @@ function useLiveChat(channelId: string) {
     finally { setLoadingMore(false) }
   }, [channelId, loadingMore, hasMore, chatMessages])
 
-  return { chatMessages, thinkMessages, connected, hasMore, loadingMore, loadMore }
+  return { chatMessages, setChatMessages, thinkMessages, connected, hasMore, loadingMore, loadMore }
 }
 
 /* ─── Hook: Smart Scroll ─── */
@@ -214,7 +214,7 @@ export default function App() {
   const scrollPositions = useRef<Map<string, number>>(new Map())
   const prevChannelRef = useRef(activeChannel)
 
-  const { chatMessages, thinkMessages, connected, hasMore, loadingMore, loadMore } = useLiveChat(activeChannel)
+  const { chatMessages, setChatMessages, thinkMessages, connected, hasMore, loadingMore, loadMore } = useLiveChat(activeChannel)
   const chatScroll = useSmartScroll(chatMessages)
   const thinkScroll = useSmartScroll(thinkMessages)
 

@@ -44,6 +44,8 @@ export interface WSMessage {
   channel_id: string;
   bot_id: string;
   content: string;
+  text?: string;
+  message?: string;
   emoji?: string;
 }
 

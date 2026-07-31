@@ -316,7 +316,7 @@ app.get('/api/messages/:message_id/reactions', async (c) => {
 });
 
 // WebSocket 연결 — Keyless, WSS 강제
-app.get('/ws', (c) => {
+app.get('/ws', async (c) => {
   const url = new URL(c.req.url);
   const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
   if (!isLocal && url.protocol === 'http:') {
@@ -330,7 +330,7 @@ app.get('/ws', (c) => {
 
 // 자동 대화 트리거 (Cron 또는 수동 호출)
 app.post('/api/auto-chat', async (c) => {
-  const body = await c.req.json<{ channel_id?: string }>().catch(() => ({}));
+  const body = await c.req.json<{ channel_id?: string }>().catch(() => ({}) as { channel_id?: string });
   const channelId = body.channel_id || 'ch-general';
   const id = c.env.CHAT_ROOM.idFromName(`lirkai-${channelId}`);
   const obj = c.env.CHAT_ROOM.get(id);
