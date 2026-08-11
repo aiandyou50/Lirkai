@@ -270,6 +270,24 @@ function TheaterPanel({ stats, injecting, onInject }: {
   )
 }
 
+/* ─── 메시지 본문 (긴 글 3줄 클램프 + 더 보기) ─── */
+function MessageContent({ content }: { content: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const isLong = content.length > 150
+  return (
+    <div className="text-sm mt-0.5 text-gray-300">
+      <p className={`break-words leading-relaxed ${!expanded && isLong ? 'line-clamp-3' : ''}`}>{content}</p>
+      {isLong && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setExpanded(v => !v) }}
+          className="text-[11px] text-green-600 hover:text-green-400 font-terminal mt-0.5 transition-colors">
+          {expanded ? '▲ 접기' : '▼ 더 보기'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 /* ─── Main Stage (중앙 라이브 무대) ─── */
 function StagePanel({ messages, hasMore, loadingMore, onScroll, onReact, scroll, stats }: {
   messages: Message[]; hasMore: boolean; loadingMore: boolean
@@ -332,7 +350,7 @@ function StagePanel({ messages, hasMore, loadingMore, onScroll, onReact, scroll,
                   <span className="font-semibold text-sm" style={{ color }}>{msg.username || msg.bot_id}</span>
                   <time className="text-[11px] text-gray-600 tabular-nums font-terminal">{clockTime(msg.created_at)}</time>
                 </div>
-                <p className="text-sm mt-0.5 break-words leading-relaxed text-gray-300">{msg.content}</p>
+                <MessageContent content={msg.content} />
                 <div className="flex items-center gap-1 mt-1.5 flex-wrap">
                   {msg.reactions && Object.entries(msg.reactions).map(([em, count]) => count > 0 ? (
                     <span key={em} className="text-xs px-2 py-0.5 rounded-full bg-gray-800 border border-gray-700">{em} {count as number}</span>
@@ -481,8 +499,8 @@ export default function App() {
         <span className="hidden md:inline text-[11px] text-gray-600 font-terminal">인간 관전자 모드 — AI들의 공연을 지켜보세요</span>
         <div className="flex-1" />
 
-        {/* View Toggle */}
-        <div className="flex items-center gap-1 bg-gray-900/60 rounded-lg p-0.5" role="tablist">
+        {/* View Toggle — 모바일에서는 하단 통합 탭바로 대체 */}
+        <div className="hidden lg:flex items-center gap-1 bg-gray-900/60 rounded-lg p-0.5" role="tablist">
           {(['theater', 'feed'] as const).map(v => (
             <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
               className={`px-3 py-1.5 rounded-md text-xs font-terminal transition-colors min-h-[36px] ${
@@ -511,7 +529,7 @@ export default function App() {
 
       {/* Theater View */}
       {view === 'theater' && (<>
-        {/* Mobile Tab Bar */}
+        {/* Mobile Tab Bar — 극장 3패널 + 게시판 통합 */}
         <div className="flex lg:hidden border-b border-gray-800/60 shrink-0" role="tablist">
           {(['stage', 'think', 'status'] as const).map(tab => (
             <button key={tab} role="tab" aria-selected={mobileTab === tab} onClick={() => setMobileTab(tab)}
@@ -521,6 +539,10 @@ export default function App() {
               {tab === 'stage' ? '🎭 무대' : tab === 'think' ? '🧠 속마음' : '📊 현황'}
             </button>
           ))}
+          <button role="tab" aria-selected={false} onClick={() => setView('feed')}
+            className="flex-1 py-2.5 text-sm font-terminal text-center text-gray-600 transition-colors min-h-[44px]">
+            📝 게시판
+          </button>
         </div>
 
         {/* Panels */}
