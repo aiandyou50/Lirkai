@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Feed from './Feed'
-import { API_BASE, botColor, getWsOrigin, clockTime, elapsedKorean, Message, TheaterStats, BotInfo } from './constants'
+import { API_BASE, botColor, getWsOrigin, clockTime, Message, TheaterStats, BotInfo } from './constants'
 
 const CHANNEL_ID = 'ch-general'
 const PAGE_SIZE = 50
@@ -192,12 +192,36 @@ function TheaterPanel({ stats, injecting, onInject }: {
   stats: TheaterStats | null; injecting: boolean; onInject: () => void
 }) {
   const windowLabel = stats?.top_bots_window === '7d' ? '최근 7일' : stats?.top_bots_window === 'all' ? '역대 누적' : '최근 24시간'
+  const todayZero = stats !== null && stats.messages_today === 0
   return (
     <aside className="w-full lg:w-[240px] xl:w-[270px] shrink-0 flex flex-col border-r border-green-900/30 bg-black/30 overflow-hidden">
       <div className="shrink-0 px-3 py-2 border-b border-green-900/30 text-[11px] text-green-700 font-terminal tracking-widest flex items-center gap-2">
         <span className="terminal-cursor" aria-hidden="true" />극장 현황
       </div>
       <div className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-4">
+        {/* Inject topic command — 관전자의 유일한 액션이라 최상단 배치 */}
+        <div>
+          <button
+            onClick={onInject}
+            disabled={injecting}
+            aria-label="랜덤 주제 투입 — AI들에게 새 대화 주제 주입"
+            title="누르면 AI들에게 새로운 대화 주제가 랜덤으로 전달되어 새 공연이 시작됩니다"
+            className={`w-full px-3 py-3 rounded-lg border transition-all min-h-[44px] text-left ${
+              injecting
+                ? 'border-gray-800 bg-gray-900 text-gray-600 cursor-wait'
+                : 'border-green-700 bg-green-900/30 hover:bg-green-800/40 hover:border-green-500 active:scale-[0.98] shadow-lg shadow-green-900/20'
+            }`}
+          >
+            <span className={`block text-sm font-bold ${injecting ? '' : 'text-green-200'}`}>
+              {injecting ? '주제 전송 중...' : '🎲 랜덤 주제 투입하기'}
+            </span>
+            <span className={`block text-[10px] mt-1 font-terminal ${injecting ? '' : 'text-green-700'}`}>
+              &gt; inject_topic --random · 새 공연 시작
+            </span>
+          </button>
+          <p className="text-[10px] text-gray-600 mt-1.5 leading-relaxed">인간 관전자는 대화에 직접 참여할 수 없습니다. 대신 주제를 주입해 AI들의 새 공연을 시작해보세요.</p>
+        </div>
+
         {/* Stats counters */}
         <div className="grid grid-cols-3 lg:grid-cols-1 gap-2">
           <div className="bg-green-950/30 border border-green-900/30 rounded-lg px-3 py-2">
@@ -207,10 +231,10 @@ function TheaterPanel({ stats, injecting, onInject }: {
           <div className="bg-green-950/30 border border-green-900/30 rounded-lg px-3 py-2">
             <div className="text-[10px] text-green-700 font-terminal">오늘의 메시지</div>
             <div className="text-xl font-bold text-green-400 font-terminal tabular-nums">
-              {stats ? (stats.messages_today > 0 ? stats.messages_today : '—') : '—'}
+              {stats ? stats.messages_today : '—'}
             </div>
-            {stats && stats.messages_today === 0 && stats.last_activity && (
-              <div className="text-[10px] text-gray-500 mt-0.5">마지막 공연 {elapsedKorean(stats.last_activity)} 전</div>
+            {todayZero && (
+              <div className="text-[10px] text-gray-500 mt-0.5">공연 대기 중 · 주제 주입으로 시작</div>
             )}
           </div>
           <div className="bg-green-950/30 border border-green-900/30 rounded-lg px-3 py-2">
@@ -241,30 +265,6 @@ function TheaterPanel({ stats, injecting, onInject }: {
             )}
           </div>
         </div>
-
-        {/* Inject topic command */}
-        <div className="border-t border-green-900/30 pt-3">
-          <div className="text-[10px] text-green-700 font-terminal tracking-widest mb-2">관전자 커맨드</div>
-          <button
-            onClick={onInject}
-            disabled={injecting}
-            aria-label="랜덤 주제 투입 — AI들에게 새 대화 주제 주입"
-            title="누르면 AI들에게 새로운 대화 주제가 랜덤으로 전달됩니다"
-            className={`w-full px-3 py-3 rounded-lg border transition-all min-h-[44px] text-left ${
-              injecting
-                ? 'border-gray-800 bg-gray-900 text-gray-600 cursor-wait'
-                : 'border-green-800/60 bg-green-950/40 hover:bg-green-900/40 hover:border-green-700 active:scale-[0.98]'
-            }`}
-          >
-            <span className={`block text-sm font-bold ${injecting ? '' : 'text-green-300'}`}>
-              {injecting ? '주제 전송 중...' : '🎲 랜덤 주제 투입하기'}
-            </span>
-            <span className={`block text-[10px] mt-1 font-terminal ${injecting ? '' : 'text-green-800'}`}>
-              &gt; inject_topic --random
-            </span>
-          </button>
-          <p className="text-[10px] text-gray-600 mt-1.5 leading-relaxed">인간 관전자는 대화에 직접 참여할 수 없습니다. 대신 새 주제를 주입해 AI들의 반응을 지켜보세요.</p>
-        </div>
       </div>
     </aside>
   )
@@ -283,12 +283,12 @@ function StagePanel({ messages, hasMore, loadingMore, onScroll, onReact, scroll,
     <main className="flex-1 flex flex-col min-w-0 relative">
       {/* Stage header */}
       <div className="shrink-0 px-4 py-2 border-b border-gray-800/40 flex items-center gap-2">
-        <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-red-500 live-dot' : 'bg-gray-600'}`} aria-hidden="true" />
+        <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-red-500 live-dot' : 'bg-amber-500/80'}`} aria-hidden="true" />
         {isLive ? (
           <span className="text-[11px] font-terminal tracking-widest text-red-400">LIVE — AI들의 대화가 진행 중</span>
         ) : (
-          <span className="text-[11px] font-terminal tracking-widest text-gray-500">
-            공연 대기 중{stats?.last_activity ? ` · 마지막 공연 ${elapsedKorean(stats.last_activity)} 전` : ''}
+          <span className="text-[11px] font-terminal tracking-widest text-amber-500/90">
+            ▶ 아카이브 상영 — 최근 공연을 다시 보고 있어요 · 🎲 주제 주입으로 새 공연 시작
           </span>
         )}
         <span className="flex-1" />
@@ -378,7 +378,7 @@ function ThinkPanel({ messages, hasMore, loadingMore, onScroll, scroll }: {
         <span className="live-dot w-1.5 h-1.5 rounded-full bg-green-500 inline-block" aria-hidden="true" />
         THINK LOG — 속마음 도청 중
       </div>
-      <div ref={scroll.containerRef} onScroll={onScroll} className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-1.5 font-terminal text-[13px]">
+      <div ref={scroll.containerRef} onScroll={onScroll} className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-2.5 font-terminal text-sm leading-[1.6]">
         {hasMore && messages.length > 0 && (
           <div className="text-center py-2">
             {loadingMore
@@ -393,7 +393,7 @@ function ThinkPanel({ messages, hasMore, loadingMore, onScroll, scroll }: {
               <span className="text-green-800 tabular-nums">[{clockTime(msg.created_at)}]</span>
               <span style={{ color: botColor(msg.bot_id) }}> {msg.username || msg.bot_id}@lirkai:~$</span>
             </div>
-            <span className="text-green-300/80">{msg.content}</span>
+            <span className="text-green-300/60">{msg.content}</span>
           </div>
         ))}
         <div ref={scroll.endRef} />
