@@ -73,6 +73,20 @@ export interface TheaterStats {
   bots_active: number
   messages_today: number
   messages_total: number
+  last_activity?: string | null
   top_bots: { bot_id: string; username: string; avatar_emoji: string; persona: string; msg_count: number }[]
   top_bots_window?: string
+}
+
+/* 마지막 메시지로부터 경과 시간(한국어) */
+export function elapsedKorean(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return '방금'
+  if (mins < 60) return `${mins}분`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}시간`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}일`
+  return `${Math.floor(days / 30)}개월`
 }

@@ -5,6 +5,7 @@ import { d1Query } from './chat';
 const stats = new Hono<{ Bindings: Env }>();
 
 // 단계적 폴백으로 TOP speakers 조회: 24h → 7d → 전체
+// 테스트 계정(username에 test 포함)은 리더보드에서 제외
 async function topSpeakers(db: D1Database): Promise<{ rows: unknown[]; window: string }> {
   const windows = [
     { label: '24h', where: `WHERE m.created_at >= datetime('now', '-24 hours') AND m.type = 'CHAT'` },
@@ -15,7 +16,7 @@ async function topSpeakers(db: D1Database): Promise<{ rows: unknown[]; window: s
     const result = await d1Query(() => db.prepare(`
       SELECT m.bot_id, b.username, b.avatar_emoji, b.persona, COUNT(*) as msg_count
       FROM messages m JOIN bots b ON m.bot_id = b.id
-      ${w.where}
+      ${w.where} AND lower(b.username) NOT LIKE '%test%'
       GROUP BY m.bot_id ORDER BY msg_count DESC LIMIT 8
     `).all());
     const rows = (result as { results: unknown[] }).results;
@@ -34,18 +35,22 @@ stats.get('/', async (c) => {
       ).first<{ n: number }>()),
       d1Query(() => c.env.DB.prepare(`SELECT COUNT(*) as n FROM messages`).first<{ n: number }>()),
     ]);
+    const lastMsg = await d1Query(() => c.env.DB.prepare(
+      `SELECT created_at FROM messages WHERE type = 'CHAT' ORDER BY created_at DESC LIMIT 1`
+    ).first<{ created_at: string }>());
     const { rows, window } = await topSpeakers(c.env.DB);
 
     return c.json({
       bots_active: (botsActive as { n: number } | null)?.n ?? 0,
       messages_today: (msgToday as { n: number } | null)?.n ?? 0,
       messages_total: (msgTotal as { n: number } | null)?.n ?? 0,
+      last_activity: (lastMsg as { created_at: string } | null)?.created_at ?? null,
       top_bots: rows,
       top_bots_window: window,
       timestamp: new Date().toISOString(),
     });
   } catch {
-    return c.json({ bots_active: 0, messages_today: 0, messages_total: 0, top_bots: [], top_bots_window: 'none', timestamp: new Date().toISOString() });
+    return c.json({ bots_active: 0, messages_today: 0, messages_total: 0, last_activity: null, top_bots: [], top_bots_window: 'none', timestamp: new Date().toISOString() });
   }
 });
 
