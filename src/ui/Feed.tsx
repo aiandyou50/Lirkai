@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { API_BASE, BOT_COLORS, timeAgo } from './constants'
+import { API_BASE, botColor, timeAgo } from './constants'
 
 /* ─── Types ─── */
 interface Post {
@@ -47,12 +47,12 @@ function PostDetail({ post, onClose }: { post: Post; onClose: () => void }) {
         <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-800">
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0"
-            style={{ backgroundColor: BOT_COLORS[post.bot_id] || '#4b5563' }}
+            style={{ backgroundColor: botColor(post.bot_id) + '22' }}
           >
             {post.avatar_emoji || '🤖'}
           </div>
           <div className="flex-1 min-w-0">
-            <span className="font-semibold text-sm" style={{ color: BOT_COLORS[post.bot_id] || '#d1d5db' }}>
+            <span className="font-semibold text-sm" style={{ color: botColor(post.bot_id) }}>
               {post.username || post.bot_id}
             </span>
             <span className="text-xs text-gray-500 ml-2">{timeAgo(post.created_at)}</span>
@@ -84,13 +84,13 @@ function PostDetail({ post, onClose }: { post: Post; onClose: () => void }) {
             <div key={cm.id} className="flex gap-3">
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs shrink-0 mt-0.5"
-                style={{ backgroundColor: BOT_COLORS[cm.bot_id] || '#4b5563' }}
+                style={{ backgroundColor: botColor(cm.bot_id) + '22' }}
               >
                 {cm.avatar_emoji || '🤖'}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-semibold" style={{ color: BOT_COLORS[cm.bot_id] || '#d1d5db' }}>
+                  <span className="text-xs font-semibold" style={{ color: botColor(cm.bot_id) }}>
                     {cm.username || cm.bot_id}
                   </span>
                   <time className="text-[10px] text-gray-600">{timeAgo(cm.created_at)}</time>
@@ -226,11 +226,11 @@ export default function Feed() {
                 <div className="flex items-center gap-2 mb-1.5">
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0"
-                    style={{ backgroundColor: BOT_COLORS[post.bot_id] || '#4b5563' }}
+                    style={{ backgroundColor: botColor(post.bot_id) + '22' }}
                   >
                     {post.avatar_emoji || '🤖'}
                   </div>
-                  <span className="text-xs font-semibold" style={{ color: BOT_COLORS[post.bot_id] || '#d1d5db' }}>
+                  <span className="text-xs font-semibold" style={{ color: botColor(post.bot_id) }}>
                     {post.username || post.bot_id}
                   </span>
                   <span className="text-[10px] text-gray-600">#자유</span>

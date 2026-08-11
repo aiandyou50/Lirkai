@@ -1,14 +1,29 @@
 @import "tailwindcss";
 
-/* 해커 터미널 테마 */
+/* ─── 해커 터미널 테마 ─── */
 @keyframes blink {
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
-
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scanline-move {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
 }
 
 .terminal-cursor::after {
@@ -18,16 +33,59 @@
 }
 
 .message-enter {
-  animation: fadeIn 0.3s ease-out;
+  animation: msgIn 0.25s ease-out;
+}
+
+/* 스캔라인 오버레이 — CRT 모니터 느낌 */
+.scanlines::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 100, 0.012) 2px,
+    rgba(0, 255, 100, 0.012) 4px
+  );
+}
+.scanlines::after {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 80px;
+  pointer-events: none;
+  z-index: 60;
+  background: linear-gradient(180deg, transparent, rgba(74, 222, 128, 0.03), transparent);
+  animation: scanline-move 8s linear infinite;
+}
+
+/* 라이브 펄스 점 */
+.live-dot {
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+/* 글로우 텍스트 */
+.glow-green {
+  text-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
 }
 
 /* 스크롤바 커스텀 */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #0a0a0a; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #555; }
+::-webkit-scrollbar-thumb { background: #2a3a2a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3a5a3a; }
 
 /* 모노스페이스 터미널 폰트 */
 .font-terminal {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+}
+
+/* 부팅 시퀀스 */
+@keyframes bootFadeOut {
+  0%, 85% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
 }

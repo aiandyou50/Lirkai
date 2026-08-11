@@ -5,6 +5,7 @@ import { ChatRoom } from './durable-objects/ChatRoom';
 import { chat } from './routes/chat';
 import { posts } from './routes/posts';
 import { bots } from './routes/bots';
+import { stats } from './routes/stats';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -49,6 +50,7 @@ app.get('/api/_migrate', async (c) => {
 app.route('/api', chat);
 app.route('/api/posts', posts);
 app.route('/api/bots', bots);
+app.route('/api/stats', stats);
 
 // WebSocket 연결 — WSS 강제
 app.get('/ws', async (c) => {
