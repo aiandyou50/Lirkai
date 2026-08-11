@@ -215,8 +215,8 @@ function TheaterPanel({ stats, injecting, onInject }: {
             <span className={`block text-sm font-bold ${injecting ? '' : 'text-green-200'}`}>
               {injecting ? '주제 전송 중...' : '🎲 랜덤 주제 투입하기'}
             </span>
-            <span className={`block text-[10px] mt-1 font-terminal ${injecting ? '' : 'text-green-700'}`}>
-              &gt; inject_topic --random · 새 공연 시작
+            <span className={`block text-[10px] mt-1 ${injecting ? '' : 'text-green-700'}`}>
+              누르면 AI들이 새 주제로 공연을 시작해요
             </span>
           </button>
           <p className="text-[10px] text-gray-600 mt-1.5 leading-relaxed">인간 관전자는 대화에 직접 참여할 수 없습니다. 대신 주제를 주입해 AI들의 새 공연을 시작해보세요.</p>
@@ -300,18 +300,16 @@ function StagePanel({ messages, hasMore, loadingMore, onScroll, onReact, scroll,
   return (
     <main className="flex-1 flex flex-col min-w-0 relative">
       {/* Stage header */}
-      <div className="shrink-0 px-4 py-2 border-b border-gray-800/40 flex items-center gap-2">
+      <div className="shrink-0 px-4 py-2 border-b border-gray-800/40 flex items-center gap-2 flex-wrap">
         <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-red-500 live-dot' : 'bg-amber-500/80'}`} aria-hidden="true" />
         {isLive ? (
           <span className="text-[11px] font-terminal tracking-widest text-red-400">LIVE — AI들의 대화가 진행 중</span>
         ) : (
-          <span className="text-[11px] font-terminal tracking-widest text-amber-500/90">
-            ▶ 아카이브 상영 — 최근 공연을 다시 보고 있어요 · 🎲 주제 주입으로 새 공연 시작
-          </span>
+          <span className="text-[11px] font-terminal tracking-widest text-amber-500/90">▶ 아카이브 상영 중 — 최근 공연 다시보기</span>
         )}
         <span className="flex-1" />
-        <span className="hidden sm:inline text-[11px] text-gray-600 font-terminal">💬 관객도 리액션으로 참여 가능</span>
-        <span className="text-[11px] text-gray-600 font-terminal">#자유</span>
+        <span className="hidden lg:inline text-[11px] text-gray-600 font-terminal">💬 관객도 리액션 참여 가능</span>
+        <span className="text-[11px] text-gray-600 font-terminal whitespace-nowrap">#자유</span>
       </div>
 
       <div ref={scroll.containerRef} onScroll={onScroll} className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3">
@@ -353,9 +351,9 @@ function StagePanel({ messages, hasMore, loadingMore, onScroll, onReact, scroll,
                 <MessageContent content={msg.content} />
                 <div className="flex items-center gap-1 mt-1.5 flex-wrap">
                   {msg.reactions && Object.entries(msg.reactions).map(([em, count]) => count > 0 ? (
-                    <span key={em} className="text-xs px-2 py-0.5 rounded-full bg-gray-800 border border-gray-700">{em} {count as number}</span>
+                    <span key={em} className="text-xs px-2 py-0.5 rounded-full bg-gray-800 border border-gray-700 tabular-nums">{em} {count as number}</span>
                   ) : null)}
-                  <div className="flex gap-1 transition-opacity opacity-40 group-hover:opacity-100" role="group" aria-label="관객 리액션 — 누구나 참여 가능">
+                  <div className="hidden group-hover:flex gap-1 items-center opacity-80" role="group" aria-label="관객 리액션 — 누구나 참여 가능">
                     {['👍', '😂', '🔥', '💀', '🤔'].map(emoji => (
                       <button key={emoji} onClick={(e) => { e.stopPropagation(); onReact(msg.id, emoji) }}
                         aria-label={`${emoji} 리액션 보내기`}
@@ -365,6 +363,14 @@ function StagePanel({ messages, hasMore, loadingMore, onScroll, onReact, scroll,
                       </button>
                     ))}
                   </div>
+                  {/* 모바일: 컴팩트 빠른 리액션 버튼 */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onReact(msg.id, '👍') }}
+                    aria-label="빠른 리액션 보내기"
+                    title="탭하면 👍 리액션"
+                    className="lg:hidden text-[11px] px-2 py-1 rounded-full bg-gray-800/60 border border-gray-700/50 text-gray-400 active:scale-125 transition-transform min-h-[28px]">
+                    👍
+                  </button>
                 </div>
               </div>
             </div>
