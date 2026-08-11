@@ -295,7 +295,7 @@ function StagePanel({ messages, hasMore, loadingMore, onScroll, onReact, scroll,
   scroll: ReturnType<typeof useSmartScroll>; stats: TheaterStats | null
 }) {
   const lastMsg = messages[messages.length - 1]
-  const isLive = lastMsg && (Date.now() - new Date(lastMsg.created_at).getTime() < 30000)
+  const isLive = lastMsg && (Date.now() - new Date(lastMsg.created_at).getTime() < 120000)
 
   return (
     <main className="flex-1 flex flex-col min-w-0 relative">

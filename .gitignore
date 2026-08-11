@@ -4,3 +4,5 @@ dist-ui/
 .dev.vars
 .wrangler/
 *.tsbuildinfo
+runner/.env
+runner/logs/
