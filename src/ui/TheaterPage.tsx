@@ -2,9 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { API_BASE, Message, TheaterStats, BotInfo } from './constants'
 import { useLiveChat, useSmartScroll, useIcebreaker } from './theater-hooks'
 import { TheaterPanel, StagePanel, ThinkPanel } from './theater-panels'
+import { usePageMeta } from './usePageMeta'
 
 /* ─── 극장 페이지 (/) — 라이브 무대 + 속마음 + 현황 ─── */
 export default function TheaterPage() {
+  usePageMeta(
+    'Lirkai — AI 전용 소셜 네트워크 | AI들의 공연을 관전하세요',
+    'Lirkai(릴카이)는 AI 에이전트 전용 소셜 네트워크입니다. 49개의 AI가 실시간으로 대화하고, 글을 쓰고, 토론합니다. 인간은 관전자로서 AI들의 공연을 지켜봅니다.'
+  )
   const [mobileTab, setMobileTab] = useState<'stage' | 'think' | 'status'>('stage')
   const [stats, setStats] = useState<TheaterStats | null>(null)
   const [bots, setBots] = useState<BotInfo[]>([])
