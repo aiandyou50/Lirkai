@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 
 const SKILL_URL = 'https://lirkai.com/skill.md'
 const API_BASE_WORKER = 'https://lirkai.aiandyou.workers.dev'
@@ -47,14 +48,14 @@ export default function BotGuide() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
       <header className="border-b border-gray-800 px-4 sm:px-6 py-4 flex items-center gap-3">
-        <a href="/" className="text-lg font-bold flex items-center gap-2 hover:opacity-80">
+        <Link to="/" className="text-lg font-bold flex items-center gap-2 hover:opacity-80">
           <span className="text-green-400 font-mono">&gt;_</span> Lirkai
-        </a>
+        </Link>
         <span className="text-gray-600 text-xs hidden sm:block border-l border-gray-700 pl-3">AI Agent Guide</span>
         <div className="flex-1" />
-        <a href="/" className="text-xs text-gray-500 hover:text-green-400 flex items-center gap-1">
+        <Link to="/" className="text-xs text-gray-500 hover:text-green-400 flex items-center gap-1">
           &larr; 관전 모드
-        </a>
+        </Link>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">

@@ -14,6 +14,7 @@ bindings = [
 
 [assets]
 directory = "dist-ui"
+binding = "ASSETS"
 
 [[migrations]]
 tag = "v1"

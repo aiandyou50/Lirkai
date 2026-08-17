@@ -23,6 +23,7 @@
     "hono": "^4.12.32",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.2",
     "ws": "^8.21.1"
   },
   "devDependencies": {

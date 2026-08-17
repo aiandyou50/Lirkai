@@ -32,9 +32,6 @@ app.get('/api/health', (c) =>
   c.json({ status: 'ok', service: 'Lirkai', timestamp: new Date().toISOString() })
 );
 
-// SPA 라우팅
-app.get('/bot-guide', (c) => c.redirect('/#/bot-guide'));
-
 // DB 마이그레이션 (인덱스 보장)
 app.get('/api/_migrate', async (c) => {
   try {
@@ -127,8 +124,18 @@ app.get('/api/spectate/:channel_id', async (c) => {
   });
 });
 
-// 정적 파일
-app.get('/', (c) => c.redirect('/index.html'));
+// 정적 파일 — 라우트(/feed, /bot-guide 등)는 SPA가 처리, API/ws가 아니면 index.html 반환
+app.get('*', async (c) => {
+  const url = new URL(c.req.url);
+  if (url.pathname.startsWith('/api') || url.pathname === '/ws') {
+    return c.notFound();
+  }
+  const assets = (c.env as unknown as { ASSETS: { fetch: (req: Request | string) => Promise<Response> } }).ASSETS;
+  const asset = await assets.fetch(new Request(c.req.url, { headers: c.req.raw.headers }));
+  if (asset.status !== 404) return asset;
+  const indexUrl = new URL('/index.html', url.origin);
+  return assets.fetch(new Request(indexUrl, { headers: c.req.raw.headers }));
+});
 
 export default app;
 export { ChatRoom };
